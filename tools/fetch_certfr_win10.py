@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://www.cert.ssi.gouv.fr"
 
 HEADERS = {
-    "User-Agent": "win10-certfr-observatory-bot/0.1 (contact: github.com/Maxime-BRIN)",
+    "User-Agent": "win10-certfr-observatory-bot/0.2 (contact: github.com/Maxime-BRIN)",
 }
 
 WINDOWS_10_KEYWORD = "windows 10"
@@ -35,6 +35,7 @@ def text_contains_windows10(s: str) -> bool:
 
 def fetch_url(path: str) -> BeautifulSoup:
     url = path if path.startswith("http") else BASE_URL + path
+    print(f"[INFO] Fetch {url}")
     resp = requests.get(url, headers=HEADERS, timeout=20)
     resp.raise_for_status()
     return BeautifulSoup(resp.text, "html.parser")
@@ -42,7 +43,8 @@ def fetch_url(path: str) -> BeautifulSoup:
 
 def extract_cve_ids(text: str) -> List[str]:
     pattern = r"CVE-\d{4}-\d{4,7}"
-    return sorted(set(re.findall(pattern, text)))
+    cves = sorted(set(re.findall(pattern, text)))
+    return cves
 
 
 def normalize_exploitation(label: str) -> str:
@@ -65,21 +67,33 @@ def parse_avis(slug: str) -> List[Dict]:
 
     text = soup.get_text(" \n", strip=True)
     cve_ids = extract_cve_ids(text)
-    print(f"[DEBUG] Avis {slug}: {len(cve_ids)} CVE détectées dans le texte brut")
+    print(f"[DEBUG] Avis {slug}: {len(cve_ids)} CVE brutes détectées")
 
-    affected_block = []
+    # trouver la section "Systèmes affectés"
+    affected_block_texts: List[str] = []
     for heading_name in ["h2", "h3"]:
         for h in soup.find_all(heading_name):
             if "systemes affectes" in normalize_text(h.get_text(strip=True)):
-                for sib in h.find_all_next(limit=5):
-                    if sib.name in {"ul", "p", "div"}:
-                        affected_block.append(sib.get_text(" ", strip=True))
-                        break
-    affected_text = " \n".join(affected_block)
+                # on prend quelques frères suivants raisonnables
+                for sib in h.find_all_next(limit=8):
+                    if sib.name in {"ul", "ol"}:
+                        affected_block_texts.append(sib.get_text(" ", strip=True))
+                    elif sib.name == "p":
+                        affected_block_texts.append(sib.get_text(" ", strip=True))
+                break
+    affected_text = " \n".join(affected_block_texts)
+    print(f"[DEBUG] Avis {slug}: longueur bloc systèmes affectés = {len(affected_text)} caractères")
 
     if not text_contains_windows10(affected_text):
         print(f"[DEBUG] Avis {slug}: aucune mention explicite de Windows 10 dans les systèmes affectés")
         return []
+
+    # extraire les lignes / versions Windows 10 depuis le bloc systèmes affectés
+    versions: List[str] = []
+    for line in affected_text.split("\n"):
+        if text_contains_windows10(line):
+            versions.append(line.strip())
+    versions = sorted(set(versions))
 
     cvss_score = None
     m = re.search(r"CVSS[^0-9]*([0-9]\.[0-9])", text)
@@ -97,8 +111,6 @@ def parse_avis(slug: str) -> List[Dict]:
         impact_type = "EoP"
     elif "deni de service" in lower_text:
         impact_type = "DoS"
-
-    versions = sorted(set(re.findall(r"Windows 10[^,;\n]*", affected_text)))
 
     published_at = None
     date_el = soup.find(class_=re.compile("date", re.I))
@@ -123,14 +135,14 @@ def parse_avis(slug: str) -> List[Dict]:
                 "references": [BASE_URL + slug],
             }
         )
-    print(f"[INFO] Avis {slug}: {len(results)} CVE Windows 10 retenues")
+
+    print(f"[INFO] Avis {slug}: {len(results)} CVE Windows 10 retenues après filtrage")
     return results
 
 
 def parse_actualite(slug: str) -> List[Dict]:
     print(f"[INFO] Parsing actualité {slug}")
     soup = fetch_url(slug)
-    text = soup.get_text(" \n", strip=True)
 
     tables = soup.find_all("table")
     if not tables:
@@ -138,59 +150,73 @@ def parse_actualite(slug: str) -> List[Dict]:
         return []
 
     results: List[Dict] = []
-    for table in tables:
-        header = [th.get_text(strip=True).lower() for th in table.find_all("th")]
+    for idx, table in enumerate(tables):
+        header_cells = table.find_all("th")
+        header = [normalize_text(th.get_text(strip=True)) for th in header_cells]
         if not header:
             continue
-        if not any("produit" in h for h in header) or not any("cve" in h for h in header):
+        # on cherche une table avec au moins produit + cve
+        try:
+            produit_idx = next(i for i, h in enumerate(header) if "produit" in h)
+            cve_idx = next(i for i, h in enumerate(header) if "cve" in h)
+        except StopIteration:
             continue
+
+        cvss_idx = next((i for i, h in enumerate(header) if "cvss" in h), None)
+        type_idx = next((i for i, h in enumerate(header) if "type" in h), None)
+        expl_idx = next((i for i, h in enumerate(header) if "exploit" in h), None)
 
         rows = table.find_all("tr")
         for row in rows[1:]:
             cells = [td.get_text(" ", strip=True) for td in row.find_all("td")]
-            if not cells or len(cells) != len(header):
+            if len(cells) < max(produit_idx, cve_idx) + 1:
                 continue
 
-            row_map = dict(zip(header, cells))
-            product = row_map.get("produit", "")
-            if not text_contains_windows10(product):
+            produit = cells[produit_idx]
+            if not text_contains_windows10(produit):
                 continue
 
-            cve_text = row_map.get("cve", "")
+            cve_text = cells[cve_idx]
             cve_ids = extract_cve_ids(cve_text)
             if not cve_ids:
                 continue
 
             cvss_score = None
-            if "cvss" in row_map:
-                m = re.search(r"([0-9]\.[0-9])", row_map["cvss"])
+            if cvss_idx is not None and cvss_idx < len(cells):
+                m = re.search(r"([0-9]\.[0-9])", cells[cvss_idx])
                 if m:
                     try:
                         cvss_score = float(m.group(1))
                     except ValueError:
                         pass
 
-            impact_type = row_map.get("type", None) or None
-            exploitation_status = normalize_exploitation(row_map.get("exploitabilite", ""))
+            impact_type = None
+            if type_idx is not None and type_idx < len(cells):
+                impact_type = cells[type_idx] or None
+
+            exploitation_status = "none"
+            if expl_idx is not None and expl_idx < len(cells):
+                exploitation_status = normalize_exploitation(cells[expl_idx])
 
             for cve in cve_ids:
                 results.append(
                     {
                         "cve_id": cve,
-                        "title": row_map.get("description", product) or product,
+                        "title": produit,
                         "published_at": None,
                         "impact_type": impact_type,
                         "cvss_base_score": cvss_score,
                         "exploitation_status": exploitation_status,
-                        "windows_10_versions": [product.strip()],
-                        "affected_products_raw": [product],
+                        "windows_10_versions": [produit.strip()],
+                        "affected_products_raw": [produit],
                         "certfr_id": slug.strip("/").split("/")[-1],
                         "certfr_url": BASE_URL + slug,
                         "source_type": "actualite",
                         "references": [BASE_URL + slug],
                     }
                 )
-    print(f"[INFO] Actualité {slug}: {len(results)} CVE Windows 10 retenues")
+
+    print(f"[INFO] Actualité {slug}: {len(results)} CVE Windows 10 retenues après filtrage")
     return results
 
 
@@ -220,6 +246,7 @@ def deduplicate(entries: List[Dict]) -> List[Dict]:
 
 
 def main() -> None:
+    # périmètre réduit mais explicite
     avis_slugs = [
         "/avis/CERTFR-2025-AVI-1092/",
     ]
@@ -227,37 +254,31 @@ def main() -> None:
         "/actualite/CERTFR-2026-ACT-007/",
     ]
 
-    entries: List[Dict] = []
+    raw_entries: List[Dict] = []
 
     for slug in avis_slugs:
         try:
-            entries.extend(parse_avis(slug))
+            entries = parse_avis(slug)
+            raw_entries.extend(entries)
         except Exception as exc:
             print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
 
     for slug in actualite_slugs:
         try:
-            entries.extend(parse_actualite(slug))
+          	entries = parse_actualite(slug)
+            raw_entries.extend(entries)
         except Exception as exc:
             print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
 
-    print(f"[INFO] Total brut toutes sources: {len(entries)} CVE (avant déduplication)")
+    print(f"[INFO] Total brut toutes sources (après filtrage Windows 10 par page): {len(raw_entries)} CVE")
 
-    entries = [
-        e
-        for e in entries
-        if text_contains_windows10(" ".join(e.get("affected_products_raw", []) + e.get("windows_10_versions", [])))
-    ]
-
-    print(f"[INFO] Après filtrage Windows 10 sur les champs produits/versions: {len(entries)} CVE")
-
-    if not entries:
+    if not raw_entries:
         print(
-            "[WARN] Aucune CVE Windows 10 trouvée sur les pages configurées — vérifier le parsing ou étendre le périmètre.",
+            "[WARN] Aucune CVE Windows 10 trouvée : vérifier le parsing ou étendre le périmètre de pages.",
             file=sys.stderr,
         )
 
-    deduped = deduplicate(entries)
+    deduped = deduplicate(raw_entries)
     print(f"[INFO] Après déduplication par CVE: {len(deduped)} entrées")
 
     now = datetime.now(timezone.utc)
@@ -267,7 +288,7 @@ def main() -> None:
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.2.1",
+            "version": "0.3.0",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start,
             "coverage_end": coverage_end,
