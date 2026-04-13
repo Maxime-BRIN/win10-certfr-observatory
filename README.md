@@ -1,103 +1,131 @@
-# Observatoire Windows 10 / CERT-FR
+# Observatoire Windows 10 / CERT-FR (post EOS)
 
-Ce dépôt contient une mini-application statique qui expose un observatoire documentaire des vulnérabilités (CVE) Windows 10 relayées par le CERT-FR après la fin de support de Windows 10 (14 octobre 2025).
+Ce projet construit un **observatoire des vulnérabilités Windows 10 référencées par le CERT-FR après la fin de support officielle de Windows 10 (14/10/2025)**.
 
-## V2 : données semi-automatisées
+L'objectif est de disposer d'un tableau de bord léger qui permet de visualiser, à partir de sources publiques CERT-FR :
 
-La V2 introduit un pipeline de collecte qui parcourt certains avis et bulletins d'actualité publics du CERT-FR, en extrait les vulnérabilités mentionnant explicitement **Windows 10**, les normalise et les exporte dans un fichier JSON consommé par le tableau de bord.
+- le volume de CVE Windows 10 post‑EOS ;
+- la répartition dans le temps ;
+- le nombre de vulnérabilités critiques ou exploitées ;
+- le détail des CVE avec leurs références CERT-FR.
 
-- **Source des données** : contenus publics du site [CERT-FR](https://www.cert.ssi.gouv.fr/).
-- **Périmètre** : uniquement les vulnérabilités pour lesquelles les systèmes ou produits affectés contiennent textuellement « Windows 10 » (par exemple « Windows 10 Version 22H2 »).
-- **Nature** : proxy documentaire, pas un scanner de parc, pas un inventaire exhaustif de toutes les vulnérabilités existantes.
-- **Référence fin de support** : l'actualité [CERTFR-2025-ACT-017](https://www.cert.ssi.gouv.fr/actualite/CERTFR-2025-ACT-017/) rappelle que Windows 10 22H2 ne reçoit plus de mises à jour de sécurité standard après le **14 octobre 2025**.
+## Architecture
 
-Chaque nouvelle CVE affectant Windows 10 après cette date représente donc, en première approximation, une vulnérabilité théoriquement non corrigée pour les systèmes qui resteraient sur Windows 10.
+- **Dashboard** : `index.html`
+  - Page principale, orientée "dashboard" :
+    - en haut, des KPI (nombre total de CVE, CVE avec CVSS ≥ 8, CVE exploitées / PoC) ;
+    - un graphique (histogramme mensuel du volume de CVE) ;
+    - un tableau détaillé des vulnérabilités Windows 10.
+  - La page consomme le fichier JSON `data/windows-10-certfr-data.json` s'il existe, sinon un échantillon `data/windows-10-certfr-sample-data.json`.
 
-## Structure du dépôt
+- **Méthodologie / explications** : `methodology.html`
+  - Page textuelle qui décrit :
+    - le périmètre (post‑EOS, sources CERT-FR) ;
+    - la liste des types de pages utilisées (avis + bulletins d'actualité) ;
+    - la façon dont Windows 10 est détecté dans les libellés ;
+    - la fenêtre temporelle appliquée ;
+    - la structure du JSON et les principales limites.
 
-- `index.html` : tableau de bord statique en français.
-  - Charge en priorité `data/windows-10-certfr-data.json`.
-  - Si le fichier n'existe pas ou n'est pas accessible, bascule automatiquement sur `data/windows-10-certfr-sample-data.json`.
-  - Affiche :
-    - des KPI agrégés (total CVE Windows 10 référencées, CVE exploitées/PoC, CVE avec CVSS ≥ 8, CVE publiées après le 14/10/2025) ;
-    - un graphique Chart.js (courbe par mois) ;
-    - un tableau filtrable des CVE (filtre texte, sévérité CVSS, statut d'exploitation) ;
-    - une section « Méthodologie » ;
-    - une section « Limites ».
-- `data/windows-10-certfr-sample-data.json` : jeu de données d'exemple, utilisé en secours.
-- `data/windows-10-certfr-data.json` : jeu de données réel, généré par le script de collecte.
-- `tools/fetch_certfr_win10.py` : script Python qui interroge certaines pages CERT-FR, filtre les vulnérabilités Windows 10 et exporte le JSON.
-- `.github/workflows/fetch-certfr.yml` : workflow GitHub Actions pour exécuter périodiquement le script et committer le fichier JSON.
+- **Script de collecte** : `tools/fetch_certfr_win10.py`
+  - Script Python qui :
+    - parcourt un sous‑ensemble de pages CERT-FR (avis et bulletins d'actualité) ;
+    - détecte, dans les tableaux, les lignes dont la colonne Produit mentionne explicitement "Windows 10" ;
+    - extrait les identifiants CVE, les scores CVSS, le type d'impact, l'état d'exploitabilité, les versions Windows 10 ;
+    - filtre les résultats pour ne garder que les CVE dont la date de publication est ≥ 14/10/2025 ;
+    - fusionne les informations par identifiant CVE et écrit le fichier `data/windows-10-certfr-data.json`.
 
-## Méthodologie (V2)
+- **Workflow GitHub Actions** : `.github/workflows/fetch-certfr.yml`
+  - Workflow CI qui peut :
+    - être lancé manuellement (`workflow_dispatch`) ;
+    - être exécuté automatiquement à chaque `push` sur la branche `main` ;
+    - installer les dépendances Python ;
+    - exécuter `tools/fetch_certfr_win10.py` ;
+    - *optionnellement* commiter/pousser le JSON mis à jour (protégé par un flag explicite, voir plus bas).
 
-1. Le script `tools/fetch_certfr_win10.py` parcourt un ensemble limité de pages CERT-FR (avis et actualités).
-2. Pour chaque page :
-   - les identifiants CVE sont extraits du texte ;
-   - les produits ou systèmes affectés sont inspectés ;
-   - seules les entrées où « Windows 10 » apparaît explicitement sont retenues ;
-   - les métadonnées disponibles sont collectées (type de vulnérabilité, CVSS, statut d'exploitation lorsque présent, date de publication, référence CERT-FR, URL).
-3. Les vulnérabilités sont regroupées par identifiant CVE :
-   - une CVE présente dans plusieurs avis/bulletins ne donne lieu qu'à une seule entrée ;
-   - les listes de versions Windows 10, de produits affectés et de références CERT-FR sont fusionnées.
-4. Le résultat est exporté dans `data/windows-10-certfr-data.json` avec la structure suivante :
-   - `dataset` : métadonnées globales (nom, version, dates de couverture, date de fin de support Windows 10, résumé de méthodologie, limites).
-   - `cves[]` : une entrée par CVE, avec notamment :
-     - `cve_id`, `title`, `published_at`, `impact_type`, `cvss_base_score` ;
-     - `exploitation_status` (`none` / `poc` / `exploited`) ;
-     - `windows_10_versions[]`, `affected_products_raw[]` ;
-     - `certfr_id`, `certfr_url`, `source_type` (`avis` / `actualite`) ;
-     - `references[]` (toutes les URLs CERT-FR liées) ;
-     - `dedup_key` (identique à `cve_id`).
+## Utilisation en local
 
-### Limites importantes
+### Prérequis
 
-- Le périmètre des pages CERT-FR parcourues est volontairement limité, pour rester dans un usage raisonnable du site et éviter le flood.
-- La structure HTML de CERT-FR peut évoluer : le parsing repose sur des hypothèses (présence de tableaux, intitulés de colonnes, sections « Systèmes affectés »), il peut donc rater ou mal interpréter certaines entrées.
-- Aucune extrapolation n'est faite à partir de termes génériques (« Microsoft Windows ») : si « Windows 10 » n'est pas mentionné textuellement, la vulnérabilité n'est pas comptée.
-- Ce projet ne fournit **ni** un inventaire de parc, **ni** un scanner de vulnérabilités, **ni** une mesure exhaustive de toutes les vulnérabilités Windows 10 existantes, notamment celles qui ne sont pas rendues publiques.
+- Python 3.11+ (une version récente de Python 3);
+- `git` (optionnel mais recommandé).
 
-## Activation de GitHub Pages
-
-Pour publier le tableau de bord :
-
-1. Aller dans l'onglet **Settings → Pages** du dépôt.
-2. Section **Build and deployment** :
-   - Source : `Deploy from a branch` ;
-   - Branch : `main`, dossier `/ (root)`.
-3. Sauvegarder, puis attendre le déploiement.
-
-L'URL attendue sera alors :
-
-- `https://maxime-brin.github.io/win10-certfr-observatory/`
-
-## Intégration via iframe (exemple Hostinger)
-
-Exemple d'intégration du tableau de bord dans un site tiers :
-
-```html
-<iframe src="https://maxime-brin.github.io/win10-certfr-observatory/" style="width:100%;min-height:900px;border:none;" loading="lazy"></iframe>
-```
-
-## Utilisation du script de collecte
-
-Exécution locale :
+Installez les dépendances Python :
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # ou .venv\\Scripts\\activate sur Windows
-pip install requests beautifulsoup4
+pip install -r requirements.txt
+```
+
+(le fichier `requirements.txt` contient au minimum `requests` et `beautifulsoup4`).
+
+### Générer le dataset localement
+
+Dans la racine du dépôt :
+
+```bash
 python tools/fetch_certfr_win10.py
 ```
 
-Le script écrase (ou crée) `data/windows-10-certfr-data.json` avec les données actualisées.
+Le script va :
 
-## Workflow GitHub Actions
+- découvrir un ensemble raisonnable de bulletins d'actualité post‑EOS à partir des pages `/actualite/` du CERT-FR ;
+- analyser les bulletins et certains avis ciblés pour ne retenir que les lignes concernant Windows 10 ;
+- filtrer les CVE par date de publication (≥ 14/10/2025) ;
+- écrire le fichier `data/windows-10-certfr-data.json`.
 
-Le workflow `.github/workflows/fetch-certfr.yml` :
+En cas d'erreur de parsing ou si la structure HTML du CERT-FR évolue, le script loggue des avertissements sur la sortie standard.
 
-- peut être déclenché à la demande via `workflow_dispatch` ;
-- s'exécute automatiquement chaque lundi à 03:00 UTC ;
-- installe Python, exécute `tools/fetch_certfr_win10.py`, commite `data/windows-10-certfr-data.json` si le fichier a changé.
+### Visualiser le dashboard
 
-Ce mécanisme permet de tenir à jour l'observatoire de façon semi-automatisée tout en restant dans un usage raisonnable du site CERT-FR.
+Une fois le dataset généré :
+
+1. Ouvrez `index.html` dans votre navigateur (par exemple via un petit serveur local ou en double‑cliquant si votre navigateur accepte les `file://`).
+2. La page chargera le JSON depuis `data/windows-10-certfr-data.json` si présent, sinon depuis `data/windows-10-certfr-sample-data.json`.
+3. Les KPI, le graphique et le tableau se mettront à jour en fonction des données.
+
+La page `methodology.html` peut être ouverte pour consulter les détails du périmètre et les limitations.
+
+## CI / CD : workflow "Fetch CERT-FR Windows 10 data"
+
+Le workflow GitHub Actions est défini dans `.github/workflows/fetch-certfr.yml`.
+
+### Déclencheurs
+
+- `workflow_dispatch` : exécution manuelle depuis l'onglet **Actions** de GitHub.
+- `push` sur `main` : exécution automatique à chaque push sur la branche principale.
+
+### Étapes principales
+
+- `Checkout repository` : récupère le code de la branche.
+- `Set up Python` : installe Python 3.11 dans l'environnement CI.
+- `Install dependencies` : installe les paquets listés dans `requirements.txt`.
+- `Run CERT-FR Windows 10 fetch script` : exécute `python tools/fetch_certfr_win10.py`.
+- `Commit and push updated dataset` : **optionnel** — ne s'exécute que si :
+  - l'événement est `workflow_dispatch` (lancement manuel) ;
+  - et la variable `ALLOW_DATASET_COMMIT` vaut `true` (voir ci‑dessous).
+
+### Contrôle du commit automatique
+
+Pour éviter que des exécutions de debug ou des changements temporaires ne poussent automatiquement un dataset vide ou incohérent sur `main`, l'étape de commit est protégée par un drapeau explicite :
+
+- l'étape ne s'exécute que si **les deux conditions** suivantes sont réunies :
+  - `github.event_name == 'workflow_dispatch'` (run manuel) ;
+  - `env.ALLOW_DATASET_COMMIT == 'true'`.
+
+Pour activer le commit automatique sur un run manuel :
+
+1. Définir une variable de dépôt `ALLOW_DATASET_COMMIT` à `true` (ou utiliser un mécanisme équivalent de variables GitHub).
+2. Lancer le workflow manuellement depuis l'onglet Actions.
+
+Dans tous les autres cas, le workflow se contente de régénérer `data/windows-10-certfr-data.json` dans l'environnement CI sans tenter de pousser sur le dépôt.
+
+## Limites et périmètre
+
+- Le périmètre couvre **un sous‑ensemble** des publications CERT-FR :
+  - certains avis explicitement listés dans le script ;
+  - des bulletins d'actualité découverts à partir des pages `/actualite/` (pagination limitée, heuristique d'arrêt pour rester raisonnable).
+- Seules les lignes dont la colonne Produit mentionne textuellement **"Windows 10"** sont retenues ;
+- Les CVE sont filtrées par date de publication pour ne garder que celles postérieures ou égales à la fin de support de Windows 10 (14/10/2025) ;
+- Le jeu de données n'a **aucune prétention d'exhaustivité** sur toutes les vulnérabilités Windows 10 existantes ;
+- Les décisions de sécurité opérationnelle doivent toujours se baser sur une combinaison de sources (avis de l'éditeur, inventaires internes, scanner de vulnérabilités, etc.).
+
+Pour plus de détails, voir `methodology.html` qui reprend la méthodologie complète et les limitations connues.
