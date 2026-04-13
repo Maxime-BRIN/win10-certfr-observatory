@@ -24,9 +24,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run CERT-FR Windows 10 fetch script
+      - name: Build CERT-FR CVE index
         run: |
-          python tools/fetch_certfr_win10.py
+          python tools/build_certfr_cve_index.py
+
+      - name: Enrich CVE with NVD and build observatory
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          python tools/enrich_cve_with_nvd.py
 
       - name: Commit and push updated dataset
         if: github.event_name == 'workflow_dispatch' && env.ALLOW_DATASET_COMMIT == 'true'
@@ -34,12 +40,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ALLOW_DATASET_COMMIT: ${{ vars.ALLOW_DATASET_COMMIT }}
         run: |
-          if [[ -n "$(git status --porcelain data/windows-10-certfr-data.json)" ]]; then
+          if [[ -n "$(git status --porcelain data/certfr_cve_index.json data/certfr_windows10_cve.json data/certfr_windows10_observatory.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/windows-10-certfr-data.json
-            git commit -m "chore: update Windows 10 CERT-FR dataset"
+            git add data/certfr_cve_index.json data/certfr_windows10_cve.json data/certfr_windows10_observatory.json
+            git commit -m "chore: update CERT-FR Windows 10 observatory dataset"
             git push
           else
-            echo "No changes in dataset, nothing to commit."
-          fi
+            echo "No changes in datasets, nothing to commit."
