@@ -1,0 +1,18 @@
+{
+  "dataset": {
+    "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
+    "version": "0.2.1",
+    "generated_at": "2026-04-13T10:10:42.364666Z",
+    "coverage_start": "2025-10-14",
+    "coverage_end": "2026-04-13",
+    "windows_10_eos_date": "2025-10-14",
+    "methodology_summary": "Jeu de données construit automatiquement à partir d'avis et de bulletins d'actualité CERT-FR qui mentionnent explicitement Windows 10 dans les systèmes ou produits affectés. Les vulnérabilités sont regroupées par identifiant CVE et enrichies avec leurs références CERT-FR.",
+    "limitations": [
+      "Le périmètre est limité aux pages CERT-FR explicitement parcourues par le script.",
+      "Seules les vulnérabilités mentionnant textuellement Windows 10 sont retenues, sans extrapolation à partir de libellés génériques (par exemple 'Microsoft Windows').",
+      "Les données peuvent être incomplètes ou obsolètes si la structure des pages CERT-FR évolue.",
+      "Ce jeu de données ne remplace pas un inventaire de parc, un scanner de vulnérabilités ni une analyse de risque détaillée."
+    ]
+  },
+  "cves": []
+}
