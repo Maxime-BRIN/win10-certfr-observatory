@@ -265,7 +265,7 @@ def main() -> None:
 
     for slug in actualite_slugs:
         try:
-          	entries = parse_actualite(slug)
+            entries = parse_actualite(slug)
             raw_entries.extend(entries)
         except Exception as exc:
             print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
