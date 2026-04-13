@@ -19,7 +19,7 @@ HEADERS = {
 
 WINDOWS_10_KEYWORD = "windows 10"
 WINDOWS_10_EOS_DATE = "2025-10-14"
-LISTING_MAX_PAGES = 6
+LISTING_MAX_PAGES = 12
 REQUEST_SLEEP_SECONDS = 0.4
 
 
@@ -91,13 +91,15 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
     """Découvre les bulletins d'actualité CERT-FR post-EOS à partir des pages de liste.
 
     Stratégie :
-    - on parcourt /actualite/, /actualite/page/2/, ... jusqu'à LISTING_MAX_PAGES ;
+    - on parcourt /actualite/, /actualite/page/2/, ... jusqu'à LISTING_MAX_PAGES ou
+      jusqu'à ce que toutes les dates trouvées soient antérieures à la fin de support ;
     - sur chaque page, on extrait les cartes de bulletin avec leur date (DD/MM/YYYY) et leur lien ;
     - on ne conserve que les bulletins dont la date est >= WINDOWS_10_EOS_DATE.
     On loggue systématiquement les dates brutes trouvées pour faciliter le debug.
     """
     slugs: List[Tuple[str, date]] = []
     coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
+    pages_visited = 0
 
     for page in range(1, LISTING_MAX_PAGES + 1):
         if page == 1:
@@ -111,13 +113,13 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
             print(f"[WARN] Échec de chargement de la page de liste {path}: {exc}", file=sys.stderr)
             break
 
-        # Sur le CERT-FR, chaque bulletin est généralement dans un <article class="actus"> ou similaire.
-        # On cible d'abord les <article>, puis on retombe sur les <li> si nécessaire.
+        pages_visited += 1
+
         cards = soup.find_all("article")
         if not cards:
             cards = soup.find_all("li")
+        print(f"[DEBUG] Liste {path}: nb cartes trouvées = {len(cards)}")
         if not cards:
-            print(f"[DEBUG] Page {path}: aucune carte de bulletin détectée")
             continue
 
         raw_dates: List[str] = []
@@ -131,7 +133,6 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
             if not href.startswith("/actualite/CERTFR-"):
                 continue
 
-            # 1) essayer un élément <time> explicite
             bulletin_date: date | None = None
             time_el = card.find("time")
             if time_el and time_el.get("datetime"):
@@ -142,7 +143,6 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
                 except ValueError:
                     pass
 
-            # 2) sinon, chercher un motif DD/MM/YYYY dans un petit élément de texte
             if bulletin_date is None:
                 date_text = None
                 for candidate in card.find_all(["span", "p", "div"], recursive=True):
@@ -169,20 +169,29 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
                 slugs.append((href, bulletin_date))
 
         print(
-            f"[DEBUG] Liste {path}: trouvé {len(page_dates)} bulletins, dates brutes: {raw_dates}",
+            f"[DEBUG] Liste {path}: trouvé {len(page_dates)} bulletins avec dates, dates brutes: {raw_dates}",
         )
 
-        # Pas de heuristique d'arrêt agressive : on parcourt jusqu'à LISTING_MAX_PAGES
+        # heuristique d'arrêt : si toutes les dates de cette page sont antérieures à la fin de support
+        # et qu'on a déjà parcouru au moins une page plus récente, on peut s'arrêter.
+        if page_dates and max(page_dates) < coverage_start and page > 1:
+            print(
+                f"[INFO] Liste {path}: toutes les dates ({min(page_dates)} -> {max(page_dates)}) < {coverage_start}, arrêt.",
+            )
+            break
+
         time.sleep(REQUEST_SLEEP_SECONDS)
 
-    # déduplication et tri par date croissante
     unique: Dict[str, date] = {}
     for href, d in slugs:
         if href not in unique or d > unique[href]:
             unique[href] = d
 
     result = sorted(unique.items(), key=lambda x: x[1])
-    print(f"[INFO] Découvert {len(result)} bulletins d'actualité post-EOS (>= {WINDOWS_10_EOS_DATE})")
+    print(
+        f"[INFO] Découvert {len(result)} bulletins d'actualité post-EOS (>= {WINDOWS_10_EOS_DATE}) "
+        f"sur {pages_visited} page(s) parcourue(s)",
+    )
     for href, d in result:
         print(f"[DEBUG]  - {href} ({d.isoformat()})")
     return result
@@ -388,6 +397,11 @@ def deduplicate(entries: List[Dict]):
 
 
 def main() -> None:
+    coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
+    coverage_end_date = date.today()
+    print(f"[INFO] Date EOS Windows 10: {coverage_start}")
+    print(f"[INFO] Fenêtre de collecte: {coverage_start} -> {coverage_end_date}")
+
     avis_slugs = [
         "/avis/CERTFR-2025-AVI-1092/",
     ]
@@ -415,9 +429,6 @@ def main() -> None:
 
     print(f"[INFO] Total brut Windows 10 toutes dates: {len(raw_entries)} CVE")
 
-    coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
-    coverage_end_date = date.today()
-
     filtered_entries: List[Dict] = []
     for e in raw_entries:
         pa = e.get("published_at")
@@ -443,7 +454,7 @@ def main() -> None:
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.5.1",
+            "version": "0.5.2",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start.isoformat(),
             "coverage_end": coverage_end_date.isoformat(),
