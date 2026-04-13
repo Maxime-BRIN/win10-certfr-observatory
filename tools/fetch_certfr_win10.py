@@ -3,7 +3,7 @@ import json
 import re
 import sys
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 from typing import Dict, List
 
@@ -71,6 +71,17 @@ def normalize_exploitation(label: str) -> str:
     if "poc" in l:
         return "poc"
     return "none"
+
+
+def parse_fr_short_date(d: str) -> str | None:
+    d = d.strip()
+    if not d:
+        return None
+    try:
+        # format typique des bulletins : 14/10/2025
+        return datetime.strptime(d, "%d/%m/%Y").date().isoformat()
+    except ValueError:
+        return None
 
 
 def parse_avis(slug: str) -> List[Dict]:
@@ -180,6 +191,7 @@ def parse_actualite(slug: str) -> List[Dict]:
         cvss_idx = next((i for i, h in enumerate(header) if "cvss" in h), None)
         type_idx = next((i for i, h in enumerate(header) if "type" in h), None)
         expl_idx = next((i for i, h in enumerate(header) if "exploit" in h), None)
+        date_idx = next((i for i, h in enumerate(header) if "date" in h), None)
 
         rows = table.find_all("tr")
         for row in rows[1:]:
@@ -215,12 +227,21 @@ def parse_actualite(slug: str) -> List[Dict]:
             if expl_idx is not None and expl_idx < len(cells):
                 exploitation_status = normalize_exploitation(cells[expl_idx])
 
+            published_at = None
+            if date_idx is not None and date_idx < len(cells):
+                published_at = parse_fr_short_date(cells[date_idx])
+                if not published_at and cells[date_idx].strip():
+                    print(
+                        f"[WARN] Date de publication non exploitable dans {slug}: {cells[date_idx]!r}",
+                        file=sys.stderr,
+                    )
+
             for cve in cve_ids:
                 results.append(
                     {
                         "cve_id": cve,
                         "title": produit,
-                        "published_at": None,
+                        "published_at": published_at,
                         "impact_type": impact_type,
                         "cvss_base_score": cvss_score,
                         "exploitation_status": exploitation_status,
@@ -268,6 +289,12 @@ def main() -> None:
         "/avis/CERTFR-2025-AVI-1092/",
     ]
     actualite_slugs = [
+        "/actualite/CERTFR-2025-ACT-045/",
+        "/actualite/CERTFR-2025-ACT-007/",
+        "/actualite/CERTFR-2025-ACT-010/",
+        "/actualite/CERTFR-2025-ACT-017/",
+        "/actualite/CERTFR-2026-ACT-002/",
+        "/actualite/CERTFR-2026-ACT-005/",
         "/actualite/CERTFR-2026-ACT-007/",
     ]
 
@@ -287,33 +314,48 @@ def main() -> None:
         except Exception as exc:
             print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
 
-    print(f"[INFO] Total brut toutes sources (après filtrage Windows 10 par page): {len(raw_entries)} CVE")
+    print(f"[INFO] Total brut Windows 10 toutes dates: {len(raw_entries)} CVE")
 
-    if not raw_entries:
-        print(
-            "[WARN] Aucune CVE Windows 10 trouvée : vérifier le parsing ou étendre le périmètre de pages.",
-            file=sys.stderr,
-        )
+    # filtrage par fenêtre temporelle post fin de support
+    coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
+    coverage_end_date = date.today()
 
-    deduped = deduplicate(raw_entries)
+    filtered_entries: List[Dict] = []
+    for e in raw_entries:
+        pa = e.get("published_at")
+        if not pa:
+            continue
+        try:
+            d = date.fromisoformat(pa)
+        except ValueError:
+            continue
+        if coverage_start <= d <= coverage_end_date:
+            filtered_entries.append(e)
+
+    print(
+        f"[INFO] Dans l'intervalle {coverage_start.isoformat()} -> {coverage_end_date.isoformat()}: "
+        f"{len(filtered_entries)} CVE retenues",
+    )
+
+    deduped = deduplicate(filtered_entries)
     print(f"[INFO] Après déduplication par CVE: {len(deduped)} entrées")
 
     now = datetime.now(timezone.utc)
-    coverage_start = WINDOWS_10_EOS_DATE
-    coverage_end = now.date().isoformat()
 
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.3.0",
+            "version": "0.4.0",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
-            "coverage_start": coverage_start,
-            "coverage_end": coverage_end,
+            "coverage_start": coverage_start.isoformat(),
+            "coverage_end": coverage_end_date.isoformat(),
             "windows_10_eos_date": WINDOWS_10_EOS_DATE,
             "methodology_summary": (
                 "Jeu de données construit automatiquement à partir d'avis et de bulletins d'actualité CERT-FR "
                 "qui mentionnent explicitement Windows 10 dans les systèmes ou produits affectés. "
-                "Les vulnérabilités sont regroupées par identifiant CVE et enrichies avec leurs références CERT-FR."
+                "Les vulnérabilités sont regroupées par identifiant CVE et enrichies avec leurs références CERT-FR. "
+                "Seules les CVE dont la date de publication est comprise entre la fin de support de Windows 10 "
+                "(14/10/2025) et la date de génération du jeu de données sont conservées."
             ),
             "limitations": [
                 "Le périmètre est limité aux pages CERT-FR explicitement parcourues par le script.",
