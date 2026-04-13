@@ -2,6 +2,7 @@
 import json
 import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
@@ -15,8 +16,21 @@ HEADERS = {
     "User-Agent": "win10-certfr-observatory-bot/0.1 (contact: github.com/Maxime-BRIN)",
 }
 
-WINDOWS_10_KEYWORD = "Windows 10"
+WINDOWS_10_KEYWORD = "windows 10"
 WINDOWS_10_EOS_DATE = "2025-10-14"
+
+
+def normalize_text(s: str) -> str:
+    if not s:
+        return ""
+    normalized = "".join(
+        c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)
+    )
+    return normalized.replace("\xa0", " ").replace("\u00a0", " ")
+
+
+def text_contains_windows10(s: str) -> bool:
+    return WINDOWS_10_KEYWORD in normalize_text(s)
 
 
 def fetch_url(path: str) -> BeautifulSoup:
@@ -34,8 +48,8 @@ def extract_cve_ids(text: str) -> List[str]:
 def normalize_exploitation(label: str) -> str:
     if not label:
         return "none"
-    l = label.lower()
-    if "exploite" in l or "exploité" in l or "in the wild" in l:
+    l = normalize_text(label)
+    if "exploite" in l or "in the wild" in l:
         return "exploited"
     if "poc" in l:
         return "poc"
@@ -43,14 +57,7 @@ def normalize_exploitation(label: str) -> str:
 
 
 def parse_avis(slug: str) -> List[Dict]:
-    """Parse un avis CERT-FR (page /avis/...).
-
-    Hypothèses de parsing (structure sujette à changement côté CERT-FR) :
-    - titre principal dans <h1>
-    - date de publication dans un élément avec classe contenant "date" ou "meta"
-    - section "Systèmes affectés" dans un bloc <h2> ou <h3> suivi de <ul> ou <p>
-    - identifiants CVE présents dans le corps de la page.
-    """
+    print(f"[INFO] Parsing avis {slug}")
     soup = fetch_url(slug)
 
     title_tag = soup.find("h1")
@@ -58,23 +65,22 @@ def parse_avis(slug: str) -> List[Dict]:
 
     text = soup.get_text(" \n", strip=True)
     cve_ids = extract_cve_ids(text)
+    print(f"[DEBUG] Avis {slug}: {len(cve_ids)} CVE détectées dans le texte brut")
 
-    # systèmes affectés
     affected_block = []
     for heading_name in ["h2", "h3"]:
         for h in soup.find_all(heading_name):
-            if "systemes affectes" in h.get_text(strip=True).lower():
-                # récupérer le contenu suivant immédiat (liste ou paragraphe)
+            if "systemes affectes" in normalize_text(h.get_text(strip=True)):
                 for sib in h.find_all_next(limit=5):
                     if sib.name in {"ul", "p", "div"}:
                         affected_block.append(sib.get_text(" ", strip=True))
                         break
     affected_text = " \n".join(affected_block)
 
-    if WINDOWS_10_KEYWORD not in affected_text:
+    if not text_contains_windows10(affected_text):
+        print(f"[DEBUG] Avis {slug}: aucune mention explicite de Windows 10 dans les systèmes affectés")
         return []
 
-    # estimation du score CVSS via expressions fréquentes (très approximatif)
     cvss_score = None
     m = re.search(r"CVSS[^0-9]*([0-9]\.[0-9])", text)
     if m:
@@ -83,20 +89,17 @@ def parse_avis(slug: str) -> List[Dict]:
         except ValueError:
             cvss_score = None
 
-    # type d'impact approximatif à partir de mots-clés
     impact_type = None
-    lower_text = text.lower()
-    if "execution de code" in lower_text or "exécution de code" in lower_text:
+    lower_text = normalize_text(text)
+    if "execution de code" in lower_text:
         impact_type = "RCE"
-    elif "elevation de privilege" in lower_text or "élévation de privilège" in lower_text:
+    elif "elevation de privilege" in lower_text:
         impact_type = "EoP"
-    elif "deni de service" in lower_text or "déni de service" in lower_text:
+    elif "deni de service" in lower_text:
         impact_type = "DoS"
 
-    # versions Windows 10 à partir du bloc systèmes affectés
     versions = sorted(set(re.findall(r"Windows 10[^,;\n]*", affected_text)))
 
-    # date de publication (best effort)
     published_at = None
     date_el = soup.find(class_=re.compile("date", re.I))
     if date_el:
@@ -120,21 +123,18 @@ def parse_avis(slug: str) -> List[Dict]:
                 "references": [BASE_URL + slug],
             }
         )
+    print(f"[INFO] Avis {slug}: {len(results)} CVE Windows 10 retenues")
     return results
 
 
 def parse_actualite(slug: str) -> List[Dict]:
-    """Parse un bulletin d'actualité CERT-FR.
-
-    Hypothèses de parsing :
-    - tableau principal avec colonnes Produit, Référence, CVE, CVSS, Type, Exploitabilité...
-    - on filtre sur les lignes dont la colonne Produit contient "Windows 10".
-    """
+    print(f"[INFO] Parsing actualité {slug}")
     soup = fetch_url(slug)
     text = soup.get_text(" \n", strip=True)
 
     tables = soup.find_all("table")
     if not tables:
+        print(f"[DEBUG] Actualité {slug}: aucune table trouvée")
         return []
 
     results: List[Dict] = []
@@ -142,7 +142,6 @@ def parse_actualite(slug: str) -> List[Dict]:
         header = [th.get_text(strip=True).lower() for th in table.find_all("th")]
         if not header:
             continue
-        # on recherche une table avec une colonne "produit" et "cve"
         if not any("produit" in h for h in header) or not any("cve" in h for h in header):
             continue
 
@@ -154,7 +153,7 @@ def parse_actualite(slug: str) -> List[Dict]:
 
             row_map = dict(zip(header, cells))
             product = row_map.get("produit", "")
-            if WINDOWS_10_KEYWORD not in product:
+            if not text_contains_windows10(product):
                 continue
 
             cve_text = row_map.get("cve", "")
@@ -174,7 +173,6 @@ def parse_actualite(slug: str) -> List[Dict]:
             impact_type = row_map.get("type", None) or None
             exploitation_status = normalize_exploitation(row_map.get("exploitabilite", ""))
 
-            # date de publication approximée : en l'absence d'info structurée, on la laisse nulle
             for cve in cve_ids:
                 results.append(
                     {
@@ -192,6 +190,7 @@ def parse_actualite(slug: str) -> List[Dict]:
                         "references": [BASE_URL + slug],
                     }
                 )
+    print(f"[INFO] Actualité {slug}: {len(results)} CVE Windows 10 retenues")
     return results
 
 
@@ -205,7 +204,6 @@ def deduplicate(entries: List[Dict]) -> List[Dict]:
             continue
 
         existing = by_cve[cve]
-        # fusion des listes et des champs manquants
         for key in ["windows_10_versions", "affected_products_raw", "references"]:
             merged = set(existing.get(key, [])) | set(e.get(key, []))
             existing[key] = sorted(merged)
@@ -222,7 +220,6 @@ def deduplicate(entries: List[Dict]) -> List[Dict]:
 
 
 def main() -> None:
-    # périmètre raisonnable : quelques identifiants récents connus + exemple
     avis_slugs = [
         "/avis/CERTFR-2025-AVI-1092/",
     ]
@@ -244,9 +241,24 @@ def main() -> None:
         except Exception as exc:
             print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
 
-    entries = [e for e in entries if WINDOWS_10_KEYWORD in " ".join(e.get("affected_products_raw", []) + e.get("windows_10_versions", []))]
+    print(f"[INFO] Total brut toutes sources: {len(entries)} CVE (avant déduplication)")
+
+    entries = [
+        e
+        for e in entries
+        if text_contains_windows10(" ".join(e.get("affected_products_raw", []) + e.get("windows_10_versions", [])))
+    ]
+
+    print(f"[INFO] Après filtrage Windows 10 sur les champs produits/versions: {len(entries)} CVE")
+
+    if not entries:
+        print(
+            "[WARN] Aucune CVE Windows 10 trouvée sur les pages configurées — vérifier le parsing ou étendre le périmètre.",
+            file=sys.stderr,
+        )
 
     deduped = deduplicate(entries)
+    print(f"[INFO] Après déduplication par CVE: {len(deduped)} entrées")
 
     now = datetime.now(timezone.utc)
     coverage_start = WINDOWS_10_EOS_DATE
@@ -255,7 +267,7 @@ def main() -> None:
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start,
             "coverage_end": coverage_end,

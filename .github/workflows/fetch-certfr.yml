@@ -38,5 +38,4 @@ jobs:
             git add data/windows-10-certfr-data.json
             git commit -m "chore: update CERT-FR Windows 10 dataset" || echo "Rien à committer"
             git push
-          else
-            echo "Pas de changement dans le dataset"
+          fi
