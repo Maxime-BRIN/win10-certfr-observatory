@@ -1,373 +1,323 @@
 #!/usr/bin/env python3
 import json
-import re
 import sys
-import time
 import unicodedata
-from datetime import datetime, timezone, date
+import re
+from datetime import datetime, date, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import List, Dict, Any, Optional
 
 import requests
-from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.cert.ssi.gouv.fr"
+AVIS_INDEX_URL = f"{BASE_URL}/avis/json/"
+ALERTE_INDEX_URL = f"{BASE_URL}/alerte/json/"
 
-HEADERS = {
-    "User-Agent": "win10-certfr-observatory-bot/0.4 (contact: github.com/Maxime-BRIN)",
-}
-
-WINDOWS_10_KEYWORD = "windows 10"
 WINDOWS_10_EOS_DATE = "2025-10-14"
-ACT_NUMBER_MAX = 200
-REQUEST_SLEEP_SECONDS = 0.25
-REQUEST_TIMEOUT_SECONDS = 20
+USER_AGENT = "win10-certfr-observatory-avi-ale/1.0 (contact: github.com/Maxime-BRIN)"
+REQUEST_TIMEOUT = 20
 
 
 def normalize_text(s: str) -> str:
+    """Minuscule + suppression des accents + normalisation espaces."""
     if not s:
         return ""
-    normalized = "".join(
-        c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)
-    )
-    return normalized.replace("\xa0", " ").replace("\u00a0", " ")
+    nfkd = unicodedata.normalize("NFKD", s)
+    no_accents = "".join(c for c in nfkd if not unicodedata.combining(c))
+    s2 = no_accents.lower()
+    s2 = s2.replace("\u00a0", " ").replace("\xa0", " ")
+    return " ".join(s2.split())
 
 
-def text_contains_windows10(s: str) -> bool:
-    return WINDOWS_10_KEYWORD in normalize_text(s)
+def is_windows10(system_string: str) -> bool:
+    """Détecte si une chaîne décrit clairement une version de Windows 10.
+
+    Règle de base :
+    - Normalisation (lower, sans accents, espaces compressés).
+    - Présence du motif 'windows 10' (avec espaces facultatifs) -> True.
+
+    Exemples inclus :
+      - 'Microsoft Windows 10'
+      - 'Microsoft Windows 10 version 21H2'
+      - 'Windows 10 Enterprise'
+      - 'Windows 10, Windows 11' -> True (Windows 10 est explicitement cité)
+
+    Cas non inclus automatiquement :
+      - 'Microsoft Windows'
+      - 'Microsoft Windows (toutes versions)'
+    """
+    if not system_string:
+        return False
+    n = normalize_text(system_string)
+    return bool(re.search(r"windows\s*10", n))
 
 
-def fetch_url(url: str) -> BeautifulSoup | None:
+def fetch_json(url: str) -> Any:
     print(f"[INFO] Fetch {url}")
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
+        resp = requests.get(
+            url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
     except requests.RequestException as exc:
         print(f"[WARN] HTTP error for {url}: {exc}", file=sys.stderr)
         return None
 
-    if resp.status_code == 404:
-        print(f"[DEBUG] {url} -> 404 (no bulletin)")
-        return None
     try:
-        resp.raise_for_status()
-    except requests.HTTPError as exc:
-        print(f"[WARN] HTTP status {resp.status_code} for {url}: {exc}", file=sys.stderr)
+        return resp.json()
+    except ValueError as exc:
+        print(f"[WARN] Failed to decode JSON from {url}: {exc}", file=sys.stderr)
         return None
 
-    return BeautifulSoup(resp.text, "html.parser")
+
+def parse_iso_date(d: str) -> Optional[date]:
+    if not d:
+        return None
+    d = d.strip()
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            dt = datetime.strptime(d[: len(fmt)], fmt)
+            return dt.date()
+        except ValueError:
+            continue
+    return None
 
 
-def extract_cve_ids(text: str) -> list[str]:
-    pattern = r"CVE-\d{4}-\d{4,7}"
-    return sorted(set(re.findall(pattern, text)))
+def extract_first_revision_date(revisions: List[Dict[str, Any]]) -> Optional[date]:
+    """Prend la date de révision la plus ancienne si disponible."""
+    if not revisions:
+        return None
+    dates: List[date] = []
+    for rev in revisions:
+        rev_str = rev.get("revision_date")
+        d = parse_iso_date(rev_str) if rev_str else None
+        if d:
+            dates.append(d)
+    if not dates:
+        return None
+    return min(dates)
 
 
-def parse_french_long_date(s: str) -> date | None:
-    """Convertit des dates type '07 avril 2026' en objet date.
+def extract_affected_system_descriptions(doc: Dict[str, Any]) -> List[str]:
+    """Extrait des descriptions textuelles des systèmes affectés.
 
-    On tolère la présence éventuelle de 'er' (1er) et on normalise les mois français.
+    Hypothèse sur la structure JSON :
+    {
+      "affected_systems": [
+        {
+          "description": "...",
+          "product": {"name": "...", "vendor": {"name": "..."}}
+        },
+        ...
+      ]
+    }
+    Adapter cette fonction si la structure réelle diffère.
     """
-    if not s:
-        return None
-    s = s.strip().lower()
-    s = s.replace("1er", "1")
+    systems: List[str] = []
+    for entry in doc.get("affected_systems", []):
+        desc = entry.get("description") or ""
+        product = entry.get("product") or {}
+        product_name = product.get("name") or ""
+        vendor = product.get("vendor") or {}
+        vendor_name = vendor.get("name") or ""
+        parts = [vendor_name, product_name, desc]
+        txt = " - ".join(p for p in parts if p)
+        if txt:
+            systems.append(txt)
+    return systems
 
-    months = {
-        "janvier": 1,
-        "fevrier": 2,
-        "février": 2,
-        "mars": 3,
-        "avril": 4,
-        "mai": 5,
-        "juin": 6,
-        "juillet": 7,
-        "aout": 8,
-        "août": 8,
-        "septembre": 9,
-        "octobre": 10,
-        "novembre": 11,
-        "decembre": 12,
-        "décembre": 12,
+
+def extract_cves_from_doc(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extrait la liste brute d'objets CVE depuis un doc JSON.
+
+    Hypothèse :
+    "cves": [ {"name": "CVE-2025-36097", "url": "https://..."}, ... ]
+    """
+    return doc.get("cves", []) or []
+
+
+def process_index_entry(doc: Dict[str, Any], source_type: str) -> Optional[Dict[str, Any]]:
+    """Convertit un avis/alerte JSON en structure intermédiaire exploitable.
+
+    Retourne un dict :
+    {
+      "ref": "CERTFR-...",
+      "first_date": date,
+      "systems": [...],
+      "cves": [...],
+      "url": "https://.../avis/CERTFR-.../" ou ".../alerte/.../",
+      "source_type": "avis" ou "alerte"
+    }
+    """
+    ref = doc.get("reference")
+    if not ref:
+        return None
+
+    revisions = doc.get("revisions", [])
+    first_date = extract_first_revision_date(revisions)
+    if not first_date:
+        fallback = parse_iso_date(doc.get("published_at", ""))
+        first_date = fallback
+
+    if not first_date:
+        print(f"[WARN] Impossible de déterminer la date pour {ref}", file=sys.stderr)
+        return None
+
+    systems = extract_affected_system_descriptions(doc)
+    cves = extract_cves_from_doc(doc)
+    if not cves:
+        return None
+
+    if source_type == "avis":
+        url = f"{BASE_URL}/avis/{ref}/"
+    else:
+        url = f"{BASE_URL}/alerte/{ref}/"
+
+    return {
+        "ref": ref,
+        "first_date": first_date,
+        "systems": systems,
+        "cves": cves,
+        "url": url,
+        "source_type": source_type,
     }
 
-    m = re.search(r"(\d{1,2})\s+([a-zéèêûôàîïç]+)\s+(\d{4})", s)
-    if not m:
-        return None
-    day = int(m.group(1))
-    month_name = m.group(2)
-    year = int(m.group(3))
-    month = months.get(month_name)
-    if not month:
-        return None
-    try:
-        return date(year, month, day)
-    except ValueError:
-        return None
+
+def load_avis_and_alerte() -> List[Dict[str, Any]]:
+    """Charge /avis/json/ et /alerte/json/ et retourne les docs avec CVE."""
+    all_docs: List[Dict[str, Any]] = []
+
+    avis_index = fetch_json(AVIS_INDEX_URL)
+    if isinstance(avis_index, list):
+        for doc in avis_index:
+            converted = process_index_entry(doc, "avis")
+            if converted:
+                all_docs.append(converted)
+    else:
+        print("[WARN] Structure inattendue pour /avis/json/ (attendu: liste)", file=sys.stderr)
+
+    alerte_index = fetch_json(ALERTE_INDEX_URL)
+    if isinstance(alerte_index, list):
+        for doc in alerte_index:
+            converted = process_index_entry(doc, "alerte")
+            if converted:
+                all_docs.append(converted)
+    else:
+        print("[WARN] Structure inattendue pour /alerte/json/ (attendu: liste)", file=sys.stderr)
+
+    print(f"[INFO] Docs indexés (avis + alerte) avec CVE: {len(all_docs)}")
+    return all_docs
 
 
-def discover_act_bulletins_by_bruteforce(coverage_start: date, coverage_end: date) -> list[dict]:
-    """Bruteforce des références CERTFR-YYYY-ACT-XXX dans une plage raisonnable.
+def build_windows10_cve_entries(
+    docs: List[Dict[str, Any]],
+    coverage_start: date,
+    coverage_end: date,
+) -> Dict[str, Dict[str, Any]]:
+    """Construit un mapping cve_id -> entrée agrégée pour Windows 10 post-EOS."""
+    by_cve: Dict[str, Dict[str, Any]] = {}
 
-    Pour chaque ACT existant, on extrait la date de première version et on conserve
-    uniquement ceux dont la date est dans [coverage_start, coverage_end].
-    """
-    year_start = 2025
-    year_end = coverage_end.year
+    for doc in docs:
+        ref = doc["ref"]
+        first_date = doc["first_date"]
+        systems = doc["systems"]
+        source_type = doc["source_type"]
+        url = doc["url"]
 
-    discovered: list[dict] = []
+        if not (coverage_start <= first_date <= coverage_end):
+            continue
 
-    for year in range(year_start, year_end + 1):
-        for n in range(1, ACT_NUMBER_MAX + 1):
-            ref = f"CERTFR-{year}-ACT-{n:03d}"
-            url = f"{BASE_URL}/actualite/{ref}/"
-            soup = fetch_url(url)
-            if soup is None:
-                # 404 ou erreur HTTP : on passe au suivant
-                time.sleep(REQUEST_SLEEP_SECONDS)
+        windows10_systems = [s for s in systems if is_windows10(s)]
+        if not windows10_systems:
+            continue
+
+        for cve_entry in doc["cves"]:
+            cve_id = cve_entry.get("name")
+            if not cve_id:
                 continue
 
-            # Chercher un bloc contenant "Date de la première version" puis la date
-            first_version_date: date | None = None
-
-            for p in soup.find_all(["p", "li", "div"]):
-                txt = p.get_text(" ", strip=True)
-                if "Date de la première version" in txt:
-                    # Souvent le texte de la date se trouve dans le même bloc ou juste après
-                    # On capture après le ':' si présent, sinon on garde tout et on laisse parse_french_long_date faire le tri
-                    parts = txt.split(":", 1)
-                    candidate = parts[1].strip() if len(parts) == 2 else txt
-                    d = parse_french_long_date(candidate)
-                    if not d:
-                        # Essayer dans un frère immédiatement suivant
-                        nxt = p.find_next_sibling()
-                        if nxt:
-                            d = parse_french_long_date(nxt.get_text(" ", strip=True))
-                    first_version_date = d
-                    break
-
-            if not first_version_date:
-                # fallback : chercher toute date longue dans la page
-                txt = soup.get_text(" ", strip=True)
-                d = parse_french_long_date(txt)
-                first_version_date = d
-
-            if not first_version_date:
-                print(f"[WARN] Impossible d'extraire la date de première version pour {ref}", file=sys.stderr)
-                time.sleep(REQUEST_SLEEP_SECONDS)
-                continue
-
-            print(f"[DEBUG] {ref}: Date de la première version = {first_version_date.isoformat()}")
-
-            if not (coverage_start <= first_version_date <= coverage_end):
-                time.sleep(REQUEST_SLEEP_SECONDS)
-                continue
-
-            discovered.append(
-                {
-                    "ref": ref,
-                    "url": url,
-                    "first_version_date": first_version_date,
-                    "soup": soup,
+            if cve_id not in by_cve:
+                by_cve[cve_id] = {
+                    "cve_id": cve_id,
+                    "first_seen_date": first_date,
+                    "windows10_systems": set(windows10_systems),
+                    "certfr_refs": {ref},
+                    "source_types": {source_type},
+                    "certfr_urls": {url},
+                    "cvss_base_score": None,
                 }
-            )
-            time.sleep(REQUEST_SLEEP_SECONDS)
+            else:
+                e = by_cve[cve_id]
+                if first_date < e["first_seen_date"]:
+                    e["first_seen_date"] = first_date
+                e["windows10_systems"].update(windows10_systems)
+                e["certfr_refs"].add(ref)
+                e["source_types"].add(source_type)
+                e["certfr_urls"].add(url)
 
-    print(
-        f"[INFO] Découvert {len(discovered)} bulletins ACT dans la fenêtre "
-        f"{coverage_start.isoformat()} -> {coverage_end.isoformat()}",
-    )
-    return discovered
-
-
-def extract_entries_from_act(act: dict) -> list[dict]:
-    """Extrait les entrées Windows 10 (ou à défaut Windows) d'un bulletin ACT.
-
-    Heuristique :
-    - parcourir les tableaux;
-    - identifier les colonnes éditeur / produit / CVE / CVSS si présentes;
-    - ne garder que les lignes avec éditeur contenant 'microsoft' et produit contenant 'windows';
-    - extraire les CVE; si le produit mentionne 'windows 10', on le marque explicitement.
-    """
-    soup: BeautifulSoup = act["soup"]
-    ref: str = act["ref"]
-    first_version_date: date = act["first_version_date"]
-
-    results: list[dict] = []
-
-    tables = soup.find_all("table")
-    if not tables:
-        print(f"[DEBUG] {ref}: aucune table de vulnérabilités trouvée")
-        return results
-
-    for table in tables:
-        header_cells = table.find_all("th")
-        header = [normalize_text(th.get_text(strip=True)) for th in header_cells]
-        if not header:
-            continue
-
-        try:
-            publisher_idx = next(i for i, h in enumerate(header) if "editeur" in h or "éditeur" in h)
-        except StopIteration:
-            publisher_idx = None
-        try:
-            product_idx = next(i for i, h in enumerate(header) if "produit" in h)
-        except StopIteration:
-            product_idx = None
-        try:
-            cve_idx = next(i for i, h in enumerate(header) if "cve" in h)
-        except StopIteration:
-            cve_idx = None
-        try:
-            cvss_idx = next(i for i, h in enumerate(header) if "cvss" in h)
-        except StopIteration:
-            cvss_idx = None
-
-        if product_idx is None or cve_idx is None:
-            continue
-
-        rows = table.find_all("tr")
-        for row in rows[1:]:
-            cells = [td.get_text(" ", strip=True) for td in row.find_all("td")]
-            if len(cells) < max(product_idx, cve_idx) + 1:
-                continue
-
-            publisher = cells[publisher_idx] if publisher_idx is not None and publisher_idx < len(cells) else ""
-            product = cells[product_idx]
-            cve_text = cells[cve_idx]
-
-            if "microsoft" not in normalize_text(publisher):
-                continue
-            if "windows" not in normalize_text(product):
-                continue
-
-            cve_ids = extract_cve_ids(cve_text)
-            if not cve_ids:
-                continue
-
-            cvss_score = None
-            if cvss_idx is not None and cvss_idx < len(cells):
-                m = re.search(r"([0-9]\.[0-9])", cells[cvss_idx])
-                if m:
-                    try:
-                        cvss_score = float(m.group(1))
-                    except ValueError:
-                        pass
-
-            for cve in cve_ids:
-                results.append(
-                    {
-                        "cve_id": cve,
-                        "certfr_act_ref": ref,
-                        "act_first_version_date": first_version_date.isoformat(),
-                        "publisher": publisher,
-                        "product": product,
-                        "cvss_base_score": cvss_score,
-                        "source_type": "actualite",
-                        "certfr_url": act["url"],
-                    }
-                )
-
-    print(f"[INFO] {ref}: {len(results)} entrées Windows découvertes")
-    return results
-
-
-def deduplicate(entries: list[dict]) -> list[dict]:
-    by_cve: Dict[str, dict] = {}
-    for e in entries:
-        cve = e["cve_id"]
-        if cve not in by_cve:
-            by_cve[cve] = e
-            continue
-
-        existing = by_cve[cve]
-        if not existing.get("cvss_base_score") and e.get("cvss_base_score"):
-            existing["cvss_base_score"] = e["cvss_base_score"]
-
-        for key in ["publisher", "product"]:
-            if key in e and e[key] and e[key] != existing.get(key):
-                merged = sorted({existing.get(key, ""), e[key]})
-                existing[key] = " | ".join(x for x in merged if x)
-
-        by_cve[cve] = existing
-    return list(by_cve.values())
+    print(f"[INFO] CVE Windows 10 post-EOS agrégées: {len(by_cve)}")
+    return by_cve
 
 
 def main() -> None:
     coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
-    coverage_end_date = date.today()
+    coverage_end = date.today()
     print(f"[INFO] Date EOS Windows 10: {coverage_start}")
-    print(f"[INFO] Fenêtre de collecte (ACT): {coverage_start} -> {coverage_end_date}")
+    print(f"[INFO] Fenêtre de collecte (AVI + ALE): {coverage_start} -> {coverage_end}")
 
-    acts = discover_act_bulletins_by_bruteforce(coverage_start, coverage_end_date)
-
-    raw_entries: list[dict] = []
-    windows10_entries: list[dict] = []
-
-    for act in acts:
-        entries = extract_entries_from_act(act)
-        raw_entries.extend(entries)
-
-        act_windows10 = [e for e in entries if text_contains_windows10(e.get("product", ""))]
-        if act_windows10:
-            windows10_entries.extend(act_windows10)
-        else:
-            print(
-                f"[INFO] ACT {act['ref']}: 0 entrées Windows 10 explicites, ignoré pour ce dataset.",
-            )
-
-    print(f"[INFO] Total brut Windows (toutes versions) depuis ACT: {len(raw_entries)} entrées")
-    print(f"[INFO] Total entrées Windows 10 explicites (tous ACT): {len(windows10_entries)}")
-
-    entries_to_keep = windows10_entries
-
-    deduped = deduplicate(entries_to_keep)
-    print(f"[INFO] Total CVE Windows 10 explicites (après déduplication): {len(deduped)}")
+    docs = load_avis_and_alerte()
+    cve_map = build_windows10_cve_entries(docs, coverage_start, coverage_end)
 
     now = datetime.now(timezone.utc)
 
-    dataset = {
+    dataset: Dict[str, Any] = {
         "dataset": {
-            "name": "Observatoire Windows 10 / CERT-FR (données ACT)",
-            "version": "0.6.1",
+            "name": "Observatoire Windows 10 / CERT-FR (AVI + ALE JSON)",
+            "version": "1.0.0",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start.isoformat(),
-            "coverage_end": coverage_end_date.isoformat(),
+            "coverage_end": coverage_end.isoformat(),
             "windows_10_eos_date": WINDOWS_10_EOS_DATE,
             "methodology_summary": (
-                "Jeu de données construit automatiquement à partir des bulletins d'actualité CERT-FR (ACT) "
-                "publiés après la fin de support de Windows 10 (14/10/2025). "
-                "Seules les lignes de vulnérabilités où le produit mentionne explicitement Windows 10 dans les tableaux "
-                "sont retenues pour ce dataset."
+                "Jeu de données construit automatiquement à partir des endpoints JSON "
+                "des avis (/avis/json/) et des alertes (/alerte/json/) du CERT-FR. "
+                "Les documents sont filtrés pour ne conserver que ceux publiés après "
+                "la fin de support de Windows 10 (14/10/2025) et mentionnant "
+                "explicitement Windows 10 dans les systèmes affectés. Les "
+                "vulnérabilités sont agrégées par identifiant CVE."
             ),
             "limitations": [
-                "Le périmètre est limité aux références CERTFR-YYYY-ACT-XXX testées dans une plage raisonnable (1..200).",
-                "Seuls les éditeurs Microsoft et les produits contenant 'Windows' sont considérés, puis filtrés pour ne garder que les mentions explicites de Windows 10.",
-                "Les vulnérabilités Windows génériques où Windows 10 n'est pas nommé dans le champ produit ne sont pas incluses dans ce dataset.",
-                "Les dates des bulletins sont dérivées du champ 'Date de la première version' lorsqu'il est présent dans la page.",
-                "Ce jeu de données dépend de la structure HTML actuelle des bulletins ACT et peut devenir partiellement obsolète si cette structure évolue.",
-                "Le champ 'source_type' vaut 'actualite' pour les CVE issues des bulletins d'actualité CERT-FR ACT référencés par 'certfr_act_ref'.",
+                "Le périmètre est limité aux avis et alertes exposés via les endpoints JSON du CERT-FR.",
+                "La détection de Windows 10 repose sur une heuristique simple cherchant le motif 'Windows 10' "
+                "dans les descriptions de systèmes affectés après normalisation.",
+                "Les vulnérabilités Microsoft Windows génériques où Windows 10 n'est pas nommé ne sont pas incluses.",
+                "La structure JSON des endpoints peut évoluer, ce qui peut nécessiter une adaptation du script.",
+                "Ce jeu de données ne remplace pas un inventaire de parc, un scanner de vulnérabilités ou une "
+                "analyse de risque détaillée.",
             ],
         },
         "cves": [],
     }
 
-    for e in deduped:
-        cve_obj = {
-            "cve_id": e["cve_id"],
-            "certfr_act_ref": e.get("certfr_act_ref"),
-            "act_first_version_date": e.get("act_first_version_date"),
-            "publisher": e.get("publisher"),
-            "product": e.get("product"),
-            "cvss_base_score": e.get("cvss_base_score"),
-            "source_type": e.get("source_type"),
-            "certfr_url": e.get("certfr_url"),
-        }
-        dataset["cves"].append(cve_obj)
+    for cve_id, e in sorted(cve_map.items(), key=lambda kv: kv[0]):
+        dataset["cves"].append(
+            {
+                "cve_id": cve_id,
+                "first_seen_date": e["first_seen_date"].isoformat(),
+                "windows10_systems": sorted(e["windows10_systems"]),
+                "certfr_refs": sorted(e["certfr_refs"]),
+                "source_types": sorted(e["source_types"]),
+                "certfr_urls": sorted(e["certfr_urls"]),
+                "cvss_base_score": e["cvss_base_score"],
+            }
+        )
 
     out_path = Path(__file__).resolve().parents[1] / "data" / "windows-10-certfr-data.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(dataset, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Écrit {len(dataset['cves'])} CVE dans {out_path}")
+    print(f"[INFO] Écrit {len(dataset['cves'])} CVE dans {out_path}")
 
 
 if __name__ == "__main__":
