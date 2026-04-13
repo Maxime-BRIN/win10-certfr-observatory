@@ -1,8 +1,8 @@
 {
   "dataset": {
     "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-    "version": "0.2.1",
-    "generated_at": "2026-04-13T10:10:42.364666Z",
+    "version": "0.3.0",
+    "generated_at": "2026-04-13T10:33:38.666287Z",
     "coverage_start": "2025-10-14",
     "coverage_end": "2026-04-13",
     "windows_10_eos_date": "2025-10-14",
@@ -14,5 +14,111 @@
       "Ce jeu de données ne remplace pas un inventaire de parc, un scanner de vulnérabilités ni une analyse de risque détaillée."
     ]
   },
-  "cves": []
+  "cves": [
+    {
+      "cve_id": "CVE-2026-21510",
+      "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
+      "published_at": null,
+      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "cvss_base_score": 8.8,
+      "exploitation_status": "none",
+      "windows_10_versions": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "affected_products_raw": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "certfr_id": "CERTFR-2026-ACT-007",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/",
+      "source_type": "actualite",
+      "references": [
+        "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/"
+      ],
+      "dedup_key": "CVE-2026-21510"
+    },
+    {
+      "cve_id": "CVE-2026-21513",
+      "title": "Windows 10 1809, Windows 10 21H2, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2016, Windows Server 2022 23H2, Windows 11 24H2, Windows Server 2022, Windows Server 2025, Windows Server 2012, Windows Server 2019",
+      "published_at": null,
+      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "cvss_base_score": 8.8,
+      "exploitation_status": "none",
+      "windows_10_versions": [
+        "Windows 10 1809, Windows 10 21H2, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2016, Windows Server 2022 23H2, Windows 11 24H2, Windows Server 2022, Windows Server 2025, Windows Server 2012, Windows Server 2019"
+      ],
+      "affected_products_raw": [
+        "Windows 10 1809, Windows 10 21H2, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2016, Windows Server 2022 23H2, Windows 11 24H2, Windows Server 2022, Windows Server 2025, Windows Server 2012, Windows Server 2019"
+      ],
+      "certfr_id": "CERTFR-2026-ACT-007",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/",
+      "source_type": "actualite",
+      "references": [
+        "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/"
+      ],
+      "dedup_key": "CVE-2026-21513"
+    },
+    {
+      "cve_id": "CVE-2026-21519",
+      "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016",
+      "published_at": null,
+      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "cvss_base_score": 7.8,
+      "exploitation_status": "none",
+      "windows_10_versions": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016"
+      ],
+      "affected_products_raw": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016"
+      ],
+      "certfr_id": "CERTFR-2026-ACT-007",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/",
+      "source_type": "actualite",
+      "references": [
+        "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/"
+      ],
+      "dedup_key": "CVE-2026-21519"
+    },
+    {
+      "cve_id": "CVE-2026-21533",
+      "title": "Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows 10 1809, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
+      "published_at": null,
+      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "cvss_base_score": 7.8,
+      "exploitation_status": "none",
+      "windows_10_versions": [
+        "Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows 10 1809, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "affected_products_raw": [
+        "Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows 10 1809, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "certfr_id": "CERTFR-2026-ACT-007",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/",
+      "source_type": "actualite",
+      "references": [
+        "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/"
+      ],
+      "dedup_key": "CVE-2026-21533"
+    },
+    {
+      "cve_id": "CVE-2026-21525",
+      "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
+      "published_at": null,
+      "impact_type": "DÃ©ni de service",
+      "cvss_base_score": 6.2,
+      "exploitation_status": "none",
+      "windows_10_versions": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "affected_products_raw": [
+        "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012"
+      ],
+      "certfr_id": "CERTFR-2026-ACT-007",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/",
+      "source_type": "actualite",
+      "references": [
+        "https://www.cert.ssi.gouv.fr/actualite/CERTFR-2026-ACT-007/"
+      ],
+      "dedup_key": "CVE-2026-21525"
+    }
+  ]
 }
