@@ -192,8 +192,9 @@ def parse_actualite(slug: str) -> List[Dict]:
 
             impact_type = None
             if type_idx is not None and type_idx < len(cells):
-                # garder le texte brut avec accents pour le JSON
-                impact_type = cells[type_idx] or None
+                raw_type = cells[type_idx]
+                print(f"[DEBUG] raw impact_type text: {repr(raw_type)}")
+                impact_type = raw_type or None
 
             exploitation_status = "none"
             if expl_idx is not None and expl_idx < len(cells):
