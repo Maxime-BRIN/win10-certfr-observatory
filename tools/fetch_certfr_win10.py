@@ -196,8 +196,6 @@ def extract_entries_from_act(act: dict) -> list[dict]:
 
     tables = soup.find_all("table")
     if not tables:
-        # Certains ACT peuvent lister les vulnérabilités dans des listes plutôt que des tables.
-        # Pour rester simple et robuste, on ignorer pour l'instant ces cas.
         print(f"[DEBUG] {ref}: aucune table de vulnérabilités trouvée")
         return results
 
@@ -285,7 +283,6 @@ def deduplicate(entries: list[dict]) -> list[dict]:
         if not existing.get("cvss_base_score") and e.get("cvss_base_score"):
             existing["cvss_base_score"] = e["cvss_base_score"]
 
-        # Concaténer les références de produit / éditeur s'ils diffèrent
         for key in ["publisher", "product"]:
             if key in e and e[key] and e[key] != existing.get(key):
                 merged = sorted({existing.get(key, ""), e[key]})
@@ -301,36 +298,37 @@ def main() -> None:
     print(f"[INFO] Date EOS Windows 10: {coverage_start}")
     print(f"[INFO] Fenêtre de collecte (ACT): {coverage_start} -> {coverage_end_date}")
 
-    # 1) Découverte brute-force des bulletins ACT
     acts = discover_act_bulletins_by_bruteforce(coverage_start, coverage_end_date)
 
-    # 2) Extraction des entrées Windows à partir des bulletins retenus
     raw_entries: list[dict] = []
+    windows10_entries: list[dict] = []
+
     for act in acts:
         entries = extract_entries_from_act(act)
         raw_entries.extend(entries)
 
-    print(f"[INFO] Total brut Windows (toutes versions) depuis ACT: {len(raw_entries)} entrées")
+        act_windows10 = [e for e in entries if text_contains_windows10(e.get("product", ""))]
+        if act_windows10:
+            windows10_entries.extend(act_windows10)
+        else:
+            print(
+                f"[INFO] ACT {act['ref']}: 0 entrées Windows 10 explicites, ignoré pour ce dataset.",
+            )
 
-    # 3) Optionnel : filtrage pour privilégier explicitement Windows 10 si la ligne le mentionne
-    windows10_entries = [e for e in raw_entries if text_contains_windows10(e.get("product", ""))]
-    if windows10_entries:
-        print(f"[INFO] Entrées avec produit mentionnant explicitement Windows 10: {len(windows10_entries)}")
-        entries_to_keep = windows10_entries
-    else:
-        # fallback : conserver toutes les entrées Windows si Windows 10 n'est pas isolable dans le texte
-        print("[WARN] Aucune mention explicite de 'Windows 10' dans les produits; utilisation du superset 'Windows'.", file=sys.stderr)
-        entries_to_keep = raw_entries
+    print(f"[INFO] Total brut Windows (toutes versions) depuis ACT: {len(raw_entries)} entrées")
+    print(f"[INFO] Total entrées Windows 10 explicites (tous ACT): {len(windows10_entries)}")
+
+    entries_to_keep = windows10_entries
 
     deduped = deduplicate(entries_to_keep)
-    print(f"[INFO] Total CVE Windows (après déduplication): {len(deduped)}")
+    print(f"[INFO] Total CVE Windows 10 explicites (après déduplication): {len(deduped)}")
 
     now = datetime.now(timezone.utc)
 
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données ACT)",
-            "version": "0.6.0",
+            "version": "0.6.1",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start.isoformat(),
             "coverage_end": coverage_end_date.isoformat(),
@@ -338,15 +336,16 @@ def main() -> None:
             "methodology_summary": (
                 "Jeu de données construit automatiquement à partir des bulletins d'actualité CERT-FR (ACT) "
                 "publiés après la fin de support de Windows 10 (14/10/2025). "
-                "Les lignes de vulnérabilités sont filtrées pour ne retenir que les éditeurs Microsoft et les produits Windows, "
-                "avec une préférence pour les mentions explicites de Windows 10 lorsque c'est possible."
+                "Seules les lignes de vulnérabilités où le produit mentionne explicitement Windows 10 dans les tableaux "
+                "sont retenues pour ce dataset."
             ),
             "limitations": [
                 "Le périmètre est limité aux références CERTFR-YYYY-ACT-XXX testées dans une plage raisonnable (1..200).",
-                "Seules les lignes où l'éditeur est Microsoft et le produit contient 'Windows' sont retenues, "
-                "ce qui peut inclure d'autres versions de Windows si les libellés ne distinguent pas clairement Windows 10.",
+                "Seuls les éditeurs Microsoft et les produits contenant 'Windows' sont considérés, puis filtrés pour ne garder que les mentions explicites de Windows 10.",
+                "Les vulnérabilités Windows génériques où Windows 10 n'est pas nommé dans le champ produit ne sont pas incluses dans ce dataset.",
                 "Les dates des bulletins sont dérivées du champ 'Date de la première version' lorsqu'il est présent dans la page.",
                 "Ce jeu de données dépend de la structure HTML actuelle des bulletins ACT et peut devenir partiellement obsolète si cette structure évolue.",
+                "Le champ 'source_type' vaut 'actualite' pour les CVE issues des bulletins d'actualité CERT-FR ACT référencés par 'certfr_act_ref'.",
             ],
         },
         "cves": [],
