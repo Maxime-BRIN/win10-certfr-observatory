@@ -6,7 +6,7 @@ import time
 import unicodedata
 from datetime import datetime, timezone, date
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,13 +14,14 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://www.cert.ssi.gouv.fr"
 
 HEADERS = {
-    "User-Agent": "win10-certfr-observatory-bot/0.3 (contact: github.com/Maxime-BRIN)",
+    "User-Agent": "win10-certfr-observatory-bot/0.4 (contact: github.com/Maxime-BRIN)",
 }
 
 WINDOWS_10_KEYWORD = "windows 10"
 WINDOWS_10_EOS_DATE = "2025-10-14"
-LISTING_MAX_PAGES = 12
-REQUEST_SLEEP_SECONDS = 0.4
+ACT_NUMBER_MAX = 200
+REQUEST_SLEEP_SECONDS = 0.25
+REQUEST_TIMEOUT_SECONDS = 20
 
 
 def normalize_text(s: str) -> str:
@@ -32,291 +33,215 @@ def normalize_text(s: str) -> str:
     return normalized.replace("\xa0", " ").replace("\u00a0", " ")
 
 
-def fix_mojibake_if_needed(s: str) -> str:
-    """Corrige certains cas de texte mal décodé (mojibake),
-    par exemple 'sÃ©curitÃ©' -> 'sécurité'.
-    On tente un round-trip latin-1 -> utf-8 uniquement si le motif 'Ã' est présent.
-    """
-    if not s:
-        return s
-    if "Ã" in s:
-        try:
-            return s.encode("latin-1").decode("utf-8")
-        except UnicodeError:
-            return s
-    return s
-
-
 def text_contains_windows10(s: str) -> bool:
     return WINDOWS_10_KEYWORD in normalize_text(s)
 
 
-def fetch_url(path: str) -> BeautifulSoup:
-    url = path if path.startswith("http") else BASE_URL + path
+def fetch_url(url: str) -> BeautifulSoup | None:
     print(f"[INFO] Fetch {url}")
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.RequestException as exc:
+        print(f"[WARN] HTTP error for {url}: {exc}", file=sys.stderr)
+        return None
+
+    if resp.status_code == 404:
+        print(f"[DEBUG] {url} -> 404 (no bulletin)")
+        return None
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as exc:
+        print(f"[WARN] HTTP status {resp.status_code} for {url}: {exc}", file=sys.stderr)
+        return None
+
     return BeautifulSoup(resp.text, "html.parser")
 
 
-def extract_cve_ids(text: str) -> List[str]:
+def extract_cve_ids(text: str) -> list[str]:
     pattern = r"CVE-\d{4}-\d{4,7}"
-    cves = sorted(set(re.findall(pattern, text)))
-    return cves
+    return sorted(set(re.findall(pattern, text)))
 
 
-def normalize_exploitation(label: str) -> str:
-    if not label:
-        return "none"
-    l = normalize_text(label)
-    if "exploite" in l or "in the wild" in l:
-        return "exploited"
-    if "poc" in l:
-        return "poc"
-    return "none"
+def parse_french_long_date(s: str) -> date | None:
+    """Convertit des dates type '07 avril 2026' en objet date.
 
+    On tolère la présence éventuelle de 'er' (1er) et on normalise les mois français.
+    """
+    if not s:
+        return None
+    s = s.strip().lower()
+    s = s.replace("1er", "1")
 
-def parse_fr_short_date(d: str) -> str | None:
-    d = d.strip()
-    if not d:
+    months = {
+        "janvier": 1,
+        "fevrier": 2,
+        "février": 2,
+        "mars": 3,
+        "avril": 4,
+        "mai": 5,
+        "juin": 6,
+        "juillet": 7,
+        "aout": 8,
+        "août": 8,
+        "septembre": 9,
+        "octobre": 10,
+        "novembre": 11,
+        "decembre": 12,
+        "décembre": 12,
+    }
+
+    m = re.search(r"(\d{1,2})\s+([a-zéèêûôàîïç]+)\s+(\d{4})", s)
+    if not m:
+        return None
+    day = int(m.group(1))
+    month_name = m.group(2)
+    year = int(m.group(3))
+    month = months.get(month_name)
+    if not month:
         return None
     try:
-        # format typique des bulletins : 14/10/2025
-        return datetime.strptime(d, "%d/%m/%Y").date().isoformat()
+        return date(year, month, day)
     except ValueError:
         return None
 
 
-def discover_actualite_slugs() -> List[Tuple[str, date]]:
-    """Découvre les bulletins d'actualité CERT-FR post-EOS à partir des pages de liste.
+def discover_act_bulletins_by_bruteforce(coverage_start: date, coverage_end: date) -> list[dict]:
+    """Bruteforce des références CERTFR-YYYY-ACT-XXX dans une plage raisonnable.
 
-    Stratégie :
-    - on parcourt /actualite/, /actualite/page/2/, ... jusqu'à LISTING_MAX_PAGES ou
-      jusqu'à ce que toutes les dates trouvées soient antérieures à la fin de support ;
-    - sur chaque page, on extrait les cartes de bulletin avec leur date (DD/MM/YYYY) et leur lien ;
-    - on ne conserve que les bulletins dont la date est >= WINDOWS_10_EOS_DATE.
-    On loggue systématiquement les dates brutes trouvées pour faciliter le debug.
+    Pour chaque ACT existant, on extrait la date de première version et on conserve
+    uniquement ceux dont la date est dans [coverage_start, coverage_end].
     """
-    slugs: List[Tuple[str, date]] = []
-    coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
-    pages_visited = 0
+    year_start = 2025
+    year_end = coverage_end.year
 
-    for page in range(1, LISTING_MAX_PAGES + 1):
-        if page == 1:
-            path = "/actualite/"
-        else:
-            path = f"/actualite/page/{page}/"
+    discovered: list[dict] = []
 
-        try:
-            soup = fetch_url(path)
-        except Exception as exc:
-            print(f"[WARN] Échec de chargement de la page de liste {path}: {exc}", file=sys.stderr)
-            break
-
-        pages_visited += 1
-
-        cards = soup.find_all("article")
-        if not cards:
-            cards = soup.find_all("li")
-        print(f"[DEBUG] Liste {path}: nb cartes trouvées = {len(cards)}")
-        if not cards:
-            continue
-
-        raw_dates: List[str] = []
-        page_dates: List[date] = []
-
-        for card in cards:
-            a = card.find("a", href=True)
-            if not a:
-                continue
-            href = a["href"]
-            if not href.startswith("/actualite/CERTFR-"):
+    for year in range(year_start, year_end + 1):
+        for n in range(1, ACT_NUMBER_MAX + 1):
+            ref = f"CERTFR-{year}-ACT-{n:03d}"
+            url = f"{BASE_URL}/actualite/{ref}/"
+            soup = fetch_url(url)
+            if soup is None:
+                # 404 ou erreur HTTP : on passe au suivant
+                time.sleep(REQUEST_SLEEP_SECONDS)
                 continue
 
-            bulletin_date: date | None = None
-            time_el = card.find("time")
-            if time_el and time_el.get("datetime"):
-                try:
-                    dt = datetime.fromisoformat(time_el["datetime"]).date()
-                    bulletin_date = dt
-                    raw_dates.append(time_el["datetime"])
-                except ValueError:
-                    pass
+            # Chercher un bloc contenant "Date de la première version" puis la date
+            first_version_date: date | None = None
 
-            if bulletin_date is None:
-                date_text = None
-                for candidate in card.find_all(["span", "p", "div"], recursive=True):
-                    text = candidate.get_text(" ", strip=True)
-                    m = re.search(r"(\d{2}/\d{2}/\d{4})", text)
-                    if m:
-                        date_text = m.group(1)
-                        break
-                if date_text:
-                    raw_dates.append(date_text)
-                    iso = parse_fr_short_date(date_text)
-                    if iso:
-                        bulletin_date = date.fromisoformat(iso)
+            for p in soup.find_all(["p", "li", "div"]):
+                txt = p.get_text(" ", strip=True)
+                if "Date de la première version" in txt:
+                    # Souvent le texte de la date se trouve dans le même bloc ou juste après
+                    # On capture après le ':' si présent, sinon on garde tout et on laisse parse_french_long_date faire le tri
+                    parts = txt.split(":", 1)
+                    candidate = parts[1].strip() if len(parts) == 2 else txt
+                    d = parse_french_long_date(candidate)
+                    if not d:
+                        # Essayer dans un frère immédiatement suivant
+                        nxt = p.find_next_sibling()
+                        if nxt:
+                            d = parse_french_long_date(nxt.get_text(" ", strip=True))
+                    first_version_date = d
+                    break
 
-            if bulletin_date is None:
+            if not first_version_date:
+                # fallback : chercher toute date longue dans la page
+                txt = soup.get_text(" ", strip=True)
+                d = parse_french_long_date(txt)
+                first_version_date = d
+
+            if not first_version_date:
+                print(f"[WARN] Impossible d'extraire la date de première version pour {ref}", file=sys.stderr)
+                time.sleep(REQUEST_SLEEP_SECONDS)
                 continue
 
-            page_dates.append(bulletin_date)
-            print(
-                f"[DEBUG] Bulletin {href}: date bulletin = {bulletin_date.isoformat()} (page {path})",
+            print(f"[DEBUG] {ref}: Date de la première version = {first_version_date.isoformat()}")
+
+            if not (coverage_start <= first_version_date <= coverage_end):
+                time.sleep(REQUEST_SLEEP_SECONDS)
+                continue
+
+            discovered.append(
+                {
+                    "ref": ref,
+                    "url": url,
+                    "first_version_date": first_version_date,
+                    "soup": soup,
+                }
             )
+            time.sleep(REQUEST_SLEEP_SECONDS)
 
-            if bulletin_date >= coverage_start:
-                slugs.append((href, bulletin_date))
-
-        print(
-            f"[DEBUG] Liste {path}: trouvé {len(page_dates)} bulletins avec dates, dates brutes: {raw_dates}",
-        )
-
-        # heuristique d'arrêt : si toutes les dates de cette page sont antérieures à la fin de support
-        # et qu'on a déjà parcouru au moins une page plus récente, on peut s'arrêter.
-        if page_dates and max(page_dates) < coverage_start and page > 1:
-            print(
-                f"[INFO] Liste {path}: toutes les dates ({min(page_dates)} -> {max(page_dates)}) < {coverage_start}, arrêt.",
-            )
-            break
-
-        time.sleep(REQUEST_SLEEP_SECONDS)
-
-    unique: Dict[str, date] = {}
-    for href, d in slugs:
-        if href not in unique or d > unique[href]:
-            unique[href] = d
-
-    result = sorted(unique.items(), key=lambda x: x[1])
     print(
-        f"[INFO] Découvert {len(result)} bulletins d'actualité post-EOS (>= {WINDOWS_10_EOS_DATE}) "
-        f"sur {pages_visited} page(s) parcourue(s)",
+        f"[INFO] Découvert {len(discovered)} bulletins ACT dans la fenêtre "
+        f"{coverage_start.isoformat()} -> {coverage_end.isoformat()}",
     )
-    for href, d in result:
-        print(f"[DEBUG]  - {href} ({d.isoformat()})")
-    return result
+    return discovered
 
 
-def parse_avis(slug: str) -> List[Dict]:
-    print(f"[INFO] Parsing avis {slug}")
-    soup = fetch_url(slug)
+def extract_entries_from_act(act: dict) -> list[dict]:
+    """Extrait les entrées Windows 10 (ou à défaut Windows) d'un bulletin ACT.
 
-    title_tag = soup.find("h1")
-    title = title_tag.get_text(strip=True) if title_tag else slug
+    Heuristique :
+    - parcourir les tableaux;
+    - identifier les colonnes éditeur / produit / CVE / CVSS si présentes;
+    - ne garder que les lignes avec éditeur contenant 'microsoft' et produit contenant 'windows';
+    - extraire les CVE; si le produit mentionne 'windows 10', on le marque explicitement.
+    """
+    soup: BeautifulSoup = act["soup"]
+    ref: str = act["ref"]
+    first_version_date: date = act["first_version_date"]
 
-    text = soup.get_text(" \n", strip=True)
-    cve_ids = extract_cve_ids(text)
-    print(f"[DEBUG] Avis {slug}: {len(cve_ids)} CVE brutes détectées")
-
-    # trouver la section "Systèmes affectés"
-    affected_block_texts: List[str] = []
-    for heading_name in ["h2", "h3"]:
-        for h in soup.find_all(heading_name):
-            if "systemes affectes" in normalize_text(h.get_text(strip=True)):
-                # on prend quelques frères suivants raisonnables
-                for sib in h.find_all_next(limit=8):
-                    if sib.name in {"ul", "ol"}:
-                        affected_block_texts.append(sib.get_text(" ", strip=True))
-                    elif sib.name == "p":
-                        affected_block_texts.append(sib.get_text(" ", strip=True))
-                break
-    affected_text = " \n".join(affected_block_texts)
-    print(f"[DEBUG] Avis {slug}: longueur bloc systèmes affectés = {len(affected_text)} caractères")
-
-    if not text_contains_windows10(affected_text):
-        print(f"[DEBUG] Avis {slug}: aucune mention explicite de Windows 10 dans les systèmes affectés")
-        return []
-
-    # extraire les lignes / versions Windows 10 depuis le bloc systèmes affectés
-    versions: List[str] = []
-    for line in affected_text.split("\n"):
-        if text_contains_windows10(line):
-            versions.append(line.strip())
-    versions = sorted(set(versions))
-
-    cvss_score = None
-    m = re.search(r"CVSS[^0-9]*([0-9]\.[0-9])", text)
-    if m:
-        try:
-            cvss_score = float(m.group(1))
-        except ValueError:
-            cvss_score = None
-
-    impact_type = None
-    lower_text = normalize_text(text)
-    if "execution de code" in lower_text:
-        impact_type = "RCE"
-    elif "elevation de privilege" in lower_text:
-        impact_type = "EoP"
-    elif "deni de service" in lower_text:
-        impact_type = "DoS"
-
-    published_at = None
-    date_el = soup.find(class_=re.compile("date", re.I))
-    if date_el:
-        published_at = date_el.get_text(strip=True)
-
-    results = []
-    for cve in cve_ids:
-        results.append(
-            {
-                "cve_id": cve,
-                "title": title,
-                "published_at": published_at,
-                "impact_type": impact_type,
-                "cvss_base_score": cvss_score,
-                "exploitation_status": "none",
-                "windows_10_versions": versions,
-                "affected_products_raw": [affected_text] if affected_text else [],
-                "certfr_id": slug.strip("/").split("/")[-1],
-                "certfr_url": BASE_URL + slug,
-                "source_type": "avis",
-                "references": [BASE_URL + slug],
-            }
-        )
-
-    print(f"[INFO] Avis {slug}: {len(results)} CVE Windows 10 retenues après filtrage")
-    return results
-
-
-def parse_actualite(slug: str) -> List[Dict]:
-    print(f"[INFO] Parsing actualité {slug}")
-    soup = fetch_url(slug)
+    results: list[dict] = []
 
     tables = soup.find_all("table")
     if not tables:
-        print(f"[DEBUG] Actualité {slug}: aucune table trouvée")
-        return []
+        # Certains ACT peuvent lister les vulnérabilités dans des listes plutôt que des tables.
+        # Pour rester simple et robuste, on ignorer pour l'instant ces cas.
+        print(f"[DEBUG] {ref}: aucune table de vulnérabilités trouvée")
+        return results
 
-    results: List[Dict] = []
-    for idx, table in enumerate(tables):
+    for table in tables:
         header_cells = table.find_all("th")
         header = [normalize_text(th.get_text(strip=True)) for th in header_cells]
         if not header:
             continue
-        # on cherche une table avec au moins produit + cve
+
         try:
-            produit_idx = next(i for i, h in enumerate(header) if "produit" in h)
+            publisher_idx = next(i for i, h in enumerate(header) if "editeur" in h or "éditeur" in h)
+        except StopIteration:
+            publisher_idx = None
+        try:
+            product_idx = next(i for i, h in enumerate(header) if "produit" in h)
+        except StopIteration:
+            product_idx = None
+        try:
             cve_idx = next(i for i, h in enumerate(header) if "cve" in h)
         except StopIteration:
-            continue
+            cve_idx = None
+        try:
+            cvss_idx = next(i for i, h in enumerate(header) if "cvss" in h)
+        except StopIteration:
+            cvss_idx = None
 
-        cvss_idx = next((i for i, h in enumerate(header) if "cvss" in h), None)
-        type_idx = next((i for i, h in enumerate(header) if "type" in h), None)
-        expl_idx = next((i for i, h in enumerate(header) if "exploit" in h), None)
-        date_idx = next((i for i, h in enumerate(header) if "date" in h), None)
+        if product_idx is None or cve_idx is None:
+            continue
 
         rows = table.find_all("tr")
         for row in rows[1:]:
             cells = [td.get_text(" ", strip=True) for td in row.find_all("td")]
-            if len(cells) < max(produit_idx, cve_idx) + 1:
+            if len(cells) < max(product_idx, cve_idx) + 1:
                 continue
 
-            produit = cells[produit_idx]
-            if not text_contains_windows10(produit):
-                continue
-
+            publisher = cells[publisher_idx] if publisher_idx is not None and publisher_idx < len(cells) else ""
+            product = cells[product_idx]
             cve_text = cells[cve_idx]
+
+            if "microsoft" not in normalize_text(publisher):
+                continue
+            if "windows" not in normalize_text(product):
+                continue
+
             cve_ids = extract_cve_ids(cve_text)
             if not cve_ids:
                 continue
@@ -330,67 +255,41 @@ def parse_actualite(slug: str) -> List[Dict]:
                     except ValueError:
                         pass
 
-            impact_type = None
-            if type_idx is not None and type_idx < len(cells):
-                raw_type = cells[type_idx]
-                print(f"[DEBUG] raw impact_type text: {repr(raw_type)}")
-                impact_type = fix_mojibake_if_needed(raw_type) or None
-
-            exploitation_status = "none"
-            if expl_idx is not None and expl_idx < len(cells):
-                exploitation_status = normalize_exploitation(cells[expl_idx])
-
-            published_at = None
-            if date_idx is not None and date_idx < len(cells):
-                published_at = parse_fr_short_date(cells[date_idx])
-                if not published_at and cells[date_idx].strip():
-                    print(
-                        f"[WARN] Date de publication non exploitable dans {slug}: {cells[date_idx]!r}",
-                        file=sys.stderr,
-                    )
-
             for cve in cve_ids:
                 results.append(
                     {
                         "cve_id": cve,
-                        "title": produit,
-                        "published_at": published_at,
-                        "impact_type": impact_type,
+                        "certfr_act_ref": ref,
+                        "act_first_version_date": first_version_date.isoformat(),
+                        "publisher": publisher,
+                        "product": product,
                         "cvss_base_score": cvss_score,
-                        "exploitation_status": exploitation_status,
-                        "windows_10_versions": [produit.strip()],
-                        "affected_products_raw": [produit],
-                        "certfr_id": slug.strip("/").split("/")[-1],
-                        "certfr_url": BASE_URL + slug,
                         "source_type": "actualite",
-                        "references": [BASE_URL + slug],
+                        "certfr_url": act["url"],
                     }
                 )
 
-    print(f"[INFO] Actualité {slug}: {len(results)} CVE Windows 10 retenues après filtrage")
+    print(f"[INFO] {ref}: {len(results)} entrées Windows découvertes")
     return results
 
 
-def deduplicate(entries: List[Dict]):
-    by_cve: Dict[str, Dict] = {}
+def deduplicate(entries: list[dict]) -> list[dict]:
+    by_cve: Dict[str, dict] = {}
     for e in entries:
         cve = e["cve_id"]
         if cve not in by_cve:
-            e["references"] = list(sorted(set(e.get("references", []))))
             by_cve[cve] = e
             continue
 
         existing = by_cve[cve]
-        for key in ["windows_10_versions", "affected_products_raw", "references"]:
-            merged = set(existing.get(key, [])) | set(e.get(key, []))
-            existing[key] = sorted(merged)
-
         if not existing.get("cvss_base_score") and e.get("cvss_base_score"):
             existing["cvss_base_score"] = e["cvss_base_score"]
-        if not existing.get("impact_type") and e.get("impact_type"):
-            existing["impact_type"] = e["impact_type"]
-        if existing.get("exploitation_status") == "none" and e.get("exploitation_status") in {"poc", "exploited"}:
-            existing["exploitation_status"] = e["exploitation_status"]
+
+        # Concaténer les références de produit / éditeur s'ils diffèrent
+        for key in ["publisher", "product"]:
+            if key in e and e[key] and e[key] != existing.get(key):
+                merged = sorted({existing.get(key, ""), e[key]})
+                existing[key] = " | ".join(x for x in merged if x)
 
         by_cve[cve] = existing
     return list(by_cve.values())
@@ -400,77 +299,54 @@ def main() -> None:
     coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
     coverage_end_date = date.today()
     print(f"[INFO] Date EOS Windows 10: {coverage_start}")
-    print(f"[INFO] Fenêtre de collecte: {coverage_start} -> {coverage_end_date}")
+    print(f"[INFO] Fenêtre de collecte (ACT): {coverage_start} -> {coverage_end_date}")
 
-    avis_slugs = [
-        "/avis/CERTFR-2025-AVI-1092/",
-    ]
+    # 1) Découverte brute-force des bulletins ACT
+    acts = discover_act_bulletins_by_bruteforce(coverage_start, coverage_end_date)
 
-    discovered_actualites = discover_actualite_slugs()
-    actualite_slugs = [href for href, _ in discovered_actualites]
+    # 2) Extraction des entrées Windows à partir des bulletins retenus
+    raw_entries: list[dict] = []
+    for act in acts:
+        entries = extract_entries_from_act(act)
+        raw_entries.extend(entries)
 
-    print(f"[INFO] Bulletins d'actualité post-EOS considérés: {len(actualite_slugs)}")
+    print(f"[INFO] Total brut Windows (toutes versions) depuis ACT: {len(raw_entries)} entrées")
 
-    raw_entries: List[Dict] = []
+    # 3) Optionnel : filtrage pour privilégier explicitement Windows 10 si la ligne le mentionne
+    windows10_entries = [e for e in raw_entries if text_contains_windows10(e.get("product", ""))]
+    if windows10_entries:
+        print(f"[INFO] Entrées avec produit mentionnant explicitement Windows 10: {len(windows10_entries)}")
+        entries_to_keep = windows10_entries
+    else:
+        # fallback : conserver toutes les entrées Windows si Windows 10 n'est pas isolable dans le texte
+        print("[WARN] Aucune mention explicite de 'Windows 10' dans les produits; utilisation du superset 'Windows'.", file=sys.stderr)
+        entries_to_keep = raw_entries
 
-    for slug in avis_slugs:
-        try:
-            entries = parse_avis(slug)
-            raw_entries.extend(entries)
-        except Exception as exc:
-            print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
-
-    for slug in actualite_slugs:
-        try:
-            entries = parse_actualite(slug)
-            raw_entries.extend(entries)
-        except Exception as exc:
-            print(f"[WARN] Échec de parsing pour {slug}: {exc}", file=sys.stderr)
-
-    print(f"[INFO] Total brut Windows 10 toutes dates: {len(raw_entries)} CVE")
-
-    filtered_entries: List[Dict] = []
-    for e in raw_entries:
-        pa = e.get("published_at")
-        if not pa:
-            continue
-        try:
-            d = date.fromisoformat(pa)
-        except ValueError:
-            continue
-        if coverage_start <= d <= coverage_end_date:
-            filtered_entries.append(e)
-
-    print(
-        f"[INFO] Dans l'intervalle {coverage_start.isoformat()} -> {coverage_end_date.isoformat()}: "
-        f"{len(filtered_entries)} CVE retenues",
-    )
-
-    deduped = deduplicate(filtered_entries)
-    print(f"[INFO] Total CVE Windows 10 (toutes sources, après filtrage Produit + date): {len(deduped)}")
+    deduped = deduplicate(entries_to_keep)
+    print(f"[INFO] Total CVE Windows (après déduplication): {len(deduped)}")
 
     now = datetime.now(timezone.utc)
 
     dataset = {
         "dataset": {
-            "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.5.2",
+            "name": "Observatoire Windows 10 / CERT-FR (données ACT)",
+            "version": "0.6.0",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start.isoformat(),
             "coverage_end": coverage_end_date.isoformat(),
             "windows_10_eos_date": WINDOWS_10_EOS_DATE,
             "methodology_summary": (
-                "Jeu de données construit automatiquement à partir d'avis et de bulletins d'actualité CERT-FR "
-                "qui mentionnent explicitement Windows 10 dans les systèmes ou produits affectés. "
-                "Les vulnérabilités sont regroupées par identifiant CVE et enrichies avec leurs références CERT-FR. "
-                "Seules les CVE dont la date de publication est comprise entre la fin de support de Windows 10 "
-                "(14/10/2025) et la date de génération du jeu de données sont conservées."
+                "Jeu de données construit automatiquement à partir des bulletins d'actualité CERT-FR (ACT) "
+                "publiés après la fin de support de Windows 10 (14/10/2025). "
+                "Les lignes de vulnérabilités sont filtrées pour ne retenir que les éditeurs Microsoft et les produits Windows, "
+                "avec une préférence pour les mentions explicites de Windows 10 lorsque c'est possible."
             ),
             "limitations": [
-                "Le périmètre est limité aux pages CERT-FR explicitement parcourues par le script, y compris une découverte raisonnable des bulletins d'actualité post-EOS.",
-                "Seules les vulnérabilités mentionnant textuellement Windows 10 sont retenues, sans extrapolation à partir de libellés génériques (par exemple 'Microsoft Windows').",
-                "Les données peuvent être incomplètes ou obsolètes si la structure des pages CERT-FR évolue.",
-                "Ce jeu de données ne remplace pas un inventaire de parc, un scanner de vulnérabilités ni une analyse de risque détaillée.",
+                "Le périmètre est limité aux références CERTFR-YYYY-ACT-XXX testées dans une plage raisonnable (1..200).",
+                "Seules les lignes où l'éditeur est Microsoft et le produit contient 'Windows' sont retenues, "
+                "ce qui peut inclure d'autres versions de Windows si les libellés ne distinguent pas clairement Windows 10.",
+                "Les dates des bulletins sont dérivées du champ 'Date de la première version' lorsqu'il est présent dans la page.",
+                "Ce jeu de données dépend de la structure HTML actuelle des bulletins ACT et peut devenir partiellement obsolète si cette structure évolue.",
             ],
         },
         "cves": [],
@@ -479,18 +355,13 @@ def main() -> None:
     for e in deduped:
         cve_obj = {
             "cve_id": e["cve_id"],
-            "title": e.get("title"),
-            "published_at": e.get("published_at"),
-            "impact_type": e.get("impact_type"),
+            "certfr_act_ref": e.get("certfr_act_ref"),
+            "act_first_version_date": e.get("act_first_version_date"),
+            "publisher": e.get("publisher"),
+            "product": e.get("product"),
             "cvss_base_score": e.get("cvss_base_score"),
-            "exploitation_status": e.get("exploitation_status", "none"),
-            "windows_10_versions": e.get("windows_10_versions", []),
-            "affected_products_raw": e.get("affected_products_raw", []),
-            "certfr_id": e.get("certfr_id"),
-            "certfr_url": e.get("certfr_url"),
             "source_type": e.get("source_type"),
-            "references": e.get("references", []),
-            "dedup_key": e["cve_id"],
+            "certfr_url": e.get("certfr_url"),
         }
         dataset["cves"].append(cve_obj)
 
