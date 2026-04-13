@@ -2,7 +2,7 @@
   "dataset": {
     "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
     "version": "0.3.0",
-    "generated_at": "2026-04-13T13:01:05.144668Z",
+    "generated_at": "2026-04-13T13:10:15.536592Z",
     "coverage_start": "2025-10-14",
     "coverage_end": "2026-04-13",
     "windows_10_eos_date": "2025-10-14",
