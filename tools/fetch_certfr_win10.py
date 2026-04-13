@@ -29,6 +29,21 @@ def normalize_text(s: str) -> str:
     return normalized.replace("\xa0", " ").replace("\u00a0", " ")
 
 
+def fix_mojibake_if_needed(s: str) -> str:
+    """Corrige certains cas de texte mal décodé (mojibake),
+    par exemple 'sÃ©curitÃ©' -> 'sécurité'.
+    On tente un round-trip latin-1 -> utf-8 uniquement si le motif 'Ã' est présent.
+    """
+    if not s:
+        return s
+    if "Ã" in s:
+        try:
+            return s.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            return s
+    return s
+
+
 def text_contains_windows10(s: str) -> bool:
     return WINDOWS_10_KEYWORD in normalize_text(s)
 
@@ -194,7 +209,7 @@ def parse_actualite(slug: str) -> List[Dict]:
             if type_idx is not None and type_idx < len(cells):
                 raw_type = cells[type_idx]
                 print(f"[DEBUG] raw impact_type text: {repr(raw_type)}")
-                impact_type = raw_type or None
+                impact_type = fix_mojibake_if_needed(raw_type) or None
 
             exploitation_status = "none"
             if expl_idx is not None and expl_idx < len(cells):
