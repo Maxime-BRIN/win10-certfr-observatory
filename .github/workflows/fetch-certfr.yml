@@ -2,15 +2,13 @@ name: Fetch CERT-FR Windows 10 data
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 1"  # Lundi 03:00 UTC (usage raisonnable)
+  push:
+    branches:
+      - main
 
 jobs:
-  fetch-and-commit:
+  fetch-certfr-data:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
@@ -19,23 +17,27 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install -r requirements.txt
 
-      - name: Fetch CERT-FR Windows 10 data
+      - name: Run CERT-FR Windows 10 fetch script
         run: |
           python tools/fetch_certfr_win10.py
 
-      - name: Commit updated dataset
+      - name: Commit and push updated dataset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git status --porcelain | grep "data/windows-10-certfr-data.json"; then
+          if [[ -n "$(git status --porcelain data/windows-10-certfr-data.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data/windows-10-certfr-data.json
-            git commit -m "chore: update CERT-FR Windows 10 dataset" || echo "Rien à committer"
+            git commit -m "chore: update Windows 10 CERT-FR dataset"
             git push
+          else
+            echo "No changes in dataset, nothing to commit."
           fi
