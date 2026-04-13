@@ -19,7 +19,7 @@ HEADERS = {
 
 WINDOWS_10_KEYWORD = "windows 10"
 WINDOWS_10_EOS_DATE = "2025-10-14"
-LISTING_MAX_PAGES = 5
+LISTING_MAX_PAGES = 6
 REQUEST_SLEEP_SECONDS = 0.4
 
 
@@ -90,11 +90,11 @@ def parse_fr_short_date(d: str) -> str | None:
 def discover_actualite_slugs() -> List[Tuple[str, date]]:
     """Découvre les bulletins d'actualité CERT-FR post-EOS à partir des pages de liste.
 
-    Stratégie conservatrice :
+    Stratégie :
     - on parcourt /actualite/, /actualite/page/2/, ... jusqu'à LISTING_MAX_PAGES ;
     - sur chaque page, on extrait les cartes de bulletin avec leur date (DD/MM/YYYY) et leur lien ;
-    - on ne conserve que les bulletins dont la date est >= WINDOWS_10_EOS_DATE ;
-    - dès qu'on rencontre une page dont toutes les dates sont < WINDOWS_10_EOS_DATE, on arrête.
+    - on ne conserve que les bulletins dont la date est >= WINDOWS_10_EOS_DATE.
+    On loggue systématiquement les dates brutes trouvées pour faciliter le debug.
     """
     slugs: List[Tuple[str, date]] = []
     coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
@@ -111,15 +111,19 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
             print(f"[WARN] Échec de chargement de la page de liste {path}: {exc}", file=sys.stderr)
             break
 
-        cards = soup.find_all("article") or soup.find_all("li")
+        # Sur le CERT-FR, chaque bulletin est généralement dans un <article class="actus"> ou similaire.
+        # On cible d'abord les <article>, puis on retombe sur les <li> si nécessaire.
+        cards = soup.find_all("article")
+        if not cards:
+            cards = soup.find_all("li")
         if not cards:
             print(f"[DEBUG] Page {path}: aucune carte de bulletin détectée")
-            break
+            continue
 
+        raw_dates: List[str] = []
         page_dates: List[date] = []
 
         for card in cards:
-            # la plupart des cartes ont un lien principal vers le bulletin
             a = card.find("a", href=True)
             if not a:
                 continue
@@ -127,58 +131,51 @@ def discover_actualite_slugs() -> List[Tuple[str, date]]:
             if not href.startswith("/actualite/CERTFR-"):
                 continue
 
-            # extraire une date visible sur la carte (souvent dans un <time> ou un span)
-            date_text = None
+            # 1) essayer un élément <time> explicite
+            bulletin_date: date | None = None
             time_el = card.find("time")
             if time_el and time_el.get("datetime"):
                 try:
                     dt = datetime.fromisoformat(time_el["datetime"]).date()
-                    page_dates.append(dt)
-                    if dt >= coverage_start:
-                        slugs.append((href, dt))
-                    continue
+                    bulletin_date = dt
+                    raw_dates.append(time_el["datetime"])
                 except ValueError:
                     pass
 
-            # fallback sur texte brut des éléments petits (<span>, <p>...) contenant un motif de date
-            for candidate in card.find_all(["span", "p", "div"], recursive=True):
-                text = candidate.get_text(" ", strip=True)
-                if re.search(r"\d{2}/\d{2}/\d{4}", text):
-                    date_text = re.search(r"(\d{2}/\d{2}/\d{4})", text).group(1)
-                    break
+            # 2) sinon, chercher un motif DD/MM/YYYY dans un petit élément de texte
+            if bulletin_date is None:
+                date_text = None
+                for candidate in card.find_all(["span", "p", "div"], recursive=True):
+                    text = candidate.get_text(" ", strip=True)
+                    m = re.search(r"(\d{2}/\d{2}/\d{4})", text)
+                    if m:
+                        date_text = m.group(1)
+                        break
+                if date_text:
+                    raw_dates.append(date_text)
+                    iso = parse_fr_short_date(date_text)
+                    if iso:
+                        bulletin_date = date.fromisoformat(iso)
 
-            if not date_text:
+            if bulletin_date is None:
                 continue
 
-            iso = parse_fr_short_date(date_text)
-            if not iso:
-                continue
-            d = date.fromisoformat(iso)
-            page_dates.append(d)
-            if d >= coverage_start:
-                slugs.append((href, d))
+            page_dates.append(bulletin_date)
+            print(
+                f"[DEBUG] Bulletin {href}: date bulletin = {bulletin_date.isoformat()} (page {path})",
+            )
 
-        if not page_dates:
-            # page vide ou non reconnue, on continue prudemment
-            continue
+            if bulletin_date >= coverage_start:
+                slugs.append((href, bulletin_date))
 
-        latest_on_page = max(page_dates)
-        oldest_on_page = min(page_dates)
         print(
-            f"[DEBUG] Page {path}: {len(page_dates)} bulletins, plus récent = {latest_on_page}, plus ancien = {oldest_on_page}",
+            f"[DEBUG] Liste {path}: trouvé {len(page_dates)} bulletins, dates brutes: {raw_dates}",
         )
 
-        # heuristique d'arrêt : si tous les bulletins de cette page sont antérieurs à la date de fin de support,
-        # l'historique restant sera aussi antérieur, on peut s'arrêter.
-        if oldest_on_page < coverage_start:
-            print(
-                f"[INFO] Page {path}: au moins un bulletin antérieur à {coverage_start}, arrêt de l'exploration des pages.",
-            )
-            break
-
+        # Pas de heuristique d'arrêt agressive : on parcourt jusqu'à LISTING_MAX_PAGES
         time.sleep(REQUEST_SLEEP_SECONDS)
 
-    # déduplication et tri par date descendante
+    # déduplication et tri par date croissante
     unique: Dict[str, date] = {}
     for href, d in slugs:
         if href not in unique or d > unique[href]:
@@ -365,7 +362,7 @@ def parse_actualite(slug: str) -> List[Dict]:
     return results
 
 
-def deduplicate(entries: List[Dict]) -> List[Dict]:
+def deduplicate(entries: List[Dict]):
     by_cve: Dict[str, Dict] = {}
     for e in entries:
         cve = e["cve_id"]
@@ -391,9 +388,6 @@ def deduplicate(entries: List[Dict]) -> List[Dict]:
 
 
 def main() -> None:
-    # Périmètre :
-    # - certains avis ciblés
-    # - ensemble raisonnable de bulletins d'actualité post-EOS découverts dynamiquement
     avis_slugs = [
         "/avis/CERTFR-2025-AVI-1092/",
     ]
@@ -421,7 +415,6 @@ def main() -> None:
 
     print(f"[INFO] Total brut Windows 10 toutes dates: {len(raw_entries)} CVE")
 
-    # filtrage par fenêtre temporelle post fin de support
     coverage_start = date.fromisoformat(WINDOWS_10_EOS_DATE)
     coverage_end_date = date.today()
 
@@ -450,7 +443,7 @@ def main() -> None:
     dataset = {
         "dataset": {
             "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
-            "version": "0.5.0",
+            "version": "0.5.1",
             "generated_at": now.isoformat().replace("+00:00", "Z"),
             "coverage_start": coverage_start.isoformat(),
             "coverage_end": coverage_end_date.isoformat(),
