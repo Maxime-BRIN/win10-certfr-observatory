@@ -10,16 +10,964 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      /* styles identiques à la V1, conservés pour la mise en forme */
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1020;
+        --bg-elevated: #141a33;
+        --bg-soft: #1b2340;
+        --border-subtle: rgba(255, 255, 255, 0.08);
+        --accent: #4f46e5;
+        --accent-soft: rgba(79, 70, 229, 0.15);
+        --text-main: #f9fafb;
+        --text-muted: #9ca3af;
+        --danger: #f97373;
+        --warning: #fbbf24;
+        --info: #38bdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%);
+        color: var(--text-main);
+      }
+
+      .page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        border-bottom: 1px solid var(--border-subtle);
+        background: linear-gradient(to right, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .header-inner {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .brand-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 30% 20%, #4f46e5 0, #1d4ed8 35%, #020617 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.6), 0 18px 40px rgba(15, 23, 42, 0.8);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .brand-text h1 {
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .brand-text p {
+        margin: 0.15rem 0 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      main {
+        flex: 1;
+      }
+
+      .content {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 1.5rem 1.25rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+        gap: 1.5rem;
+        align-items: stretch;
+      }
+
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .panel {
+        border-radius: 1rem;
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.95));
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 22px 45px rgba(15, 23, 42, 0.85);
+        padding: 1.25rem 1.25rem 1.35rem;
+      }
+
+      .hero-main h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+      }
+
+      .hero-main p {
+        margin: 0.35rem 0;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+      }
+
+      .hero-main p strong {
+        color: #e5e7eb;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.9rem;
+      }
+
+      .hero-meta-item {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+      }
+
+      .hero-secondary {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .hero-secondary .warning {
+        display: flex;
+        gap: 0.6rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        background: radial-gradient(circle at top left, rgba(248, 250, 252, 0.06) 0, rgba(15, 23, 42, 0.98) 40%, rgba(15, 23, 42, 1) 100%);
+        border-radius: 0.9rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid rgba(248, 250, 252, 0.05);
+      }
+
+      .hero-secondary .warning-icon {
+        font-size: 1rem;
+      }
+
+      .hero-secondary .warning strong {
+        color: #e5e7eb;
+      }
+
+      .hero-secondary .source {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .hero-secondary a {
+        color: var(--info);
+        text-decoration: none;
+      }
+
+      .hero-secondary a:hover {
+        text-decoration: underline;
+      }
+
+      .section-title {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .section-title span {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.9rem;
+      }
+
+      @media (max-width: 900px) {
+        .kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      .kpi {
+        padding: 0.9rem 0.9rem 0.85rem;
+        border-radius: 0.9rem;
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.93));
+        border: 1px solid var(--border-subtle);
+      }
+
+      .kpi-label {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-bottom: 0.4rem;
+      }
+
+      .kpi-value {
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+
+      .kpi-tag {
+        margin-top: 0.3rem;
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        color: var(--text-muted);
+      }
+
+      .kpi-tag-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .layout-2col {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.45fr);
+        gap: 1.25rem;
+      }
+
+      @media (max-width: 900px) {
+        .layout-2col {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .chart-wrapper {
+        padding-top: 0.3rem;
+      }
+
+      .chart-legend {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+
+      .chart-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+      }
+
+      .chart-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+      }
+
+      .chart-dot-total {
+        background: #4f46e5;
+      }
+
+      .chart-dot-high {
+        background: #f97316;
+      }
+
+      .chart-dot-exploited {
+        background: #f97373;
+      }
+
+      .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      input[type="text"],
+      select {
+        background: rgba(15, 23, 42, 0.92);
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        padding: 0.35rem 0.75rem;
+        color: var(--text-main);
+        font-size: 0.8rem;
+        outline: none;
+        min-width: 0;
+      }
+
+      input[type="text"]::placeholder {
+        color: rgba(148, 163, 184, 0.7);
+      }
+
+      input[type="text"]:focus,
+      select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.6);
+      }
+
+      .table-wrapper {
+        border-radius: 0.9rem;
+        border: 1px solid var(--border-subtle);
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.95));
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+
+      thead {
+        background: rgba(15, 23, 42, 0.98);
+      }
+
+      th,
+      td {
+        padding: 0.6rem 0.75rem;
+        text-align: left;
+      }
+
+      th {
+        font-weight: 500;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-subtle);
+        white-space: nowrap;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(15, 23, 42, 0.94);
+      }
+
+      tbody tr:hover {
+        background: rgba(15, 23, 42, 0.98);
+      }
+
+      td {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.9);
+      }
+
+      .pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .pill-badge.danger {
+        border-color: rgba(248, 113, 113, 0.6);
+        color: #fecaca;
+      }
+
+      .pill-badge.warning {
+        border-color: rgba(251, 191, 36, 0.6);
+        color: #fef3c7;
+      }
+
+      .pill-badge.info {
+        border-color: rgba(56, 189, 248, 0.7);
+        color: #e0f2fe;
+      }
+
+      .tag-small {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+      }
+
+      .link-inline {
+        color: var(--info);
+        text-decoration: none;
+      }
+
+      .link-inline:hover {
+        text-decoration: underline;
+      }
+
+      .text-muted {
+        color: var(--text-muted);
+        font-size: 0.78rem;
+      }
+
+      .section-body {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .section-body p {
+        margin: 0;
+      }
+
+      .bullet-list {
+        margin: 0.2rem 0 0;
+        padding-left: 1rem;
+      }
+
+      .bullet-list li {
+        margin-bottom: 0.2rem;
+      }
+
+      footer {
+        border-top: 1px solid var(--border-subtle);
+        padding: 0.9rem 1.25rem 1.2rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        background: rgba(15, 23, 42, 0.98);
+      }
+
+      .footer-inner {
+        max-width: 1120px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .footer-inner a {
+        color: var(--info);
+        text-decoration: none;
+      }
+
+      .footer-inner a:hover {
+        text-decoration: underline;
+      }
+
+      .alert {
+        margin-top: 0.75rem;
+        padding: 0.6rem 0.9rem;
+        border-radius: 0.6rem;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        background: rgba(15, 23, 42, 0.9);
+        font-size: 0.8rem;
+      }
     </style>
   </head>
   <body>
-    <!-- contenu HTML inchangé, seul le JS de chargement de données est adapté en bas de fichier -->
+    <div class="page">
+      <header>
+        <div class="header-inner">
+          <div class="brand">
+            <div class="brand-badge">W10</div>
+            <div class="brand-text">
+              <h1>Observatoire Windows 10 / CERT-FR</h1>
+              <p>Proxy documentaire statique des CVE Windows 10 relayées par le CERT-FR</p>
+            </div>
+          </div>
+          <div class="pill">
+            <span style="width: 8px; height: 8px; border-radius: 999px; background: #22c55e;"></span>
+            <span>V2 — pipeline semi-automatisé</span>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div class="content">
+          <section class="hero">
+            <div class="panel hero-main">
+              <h2>Suivi des vulnérabilités Windows 10 après la fin de support</h2>
+              <p>
+                Windows 10 (version 22H2) est arrivé en fin de support le <strong>14&nbsp;octobre&nbsp;2025</strong>, ce qui signifie la fin des mises à jour de sécurité standard pour la plupart des postes encore sous cet OS.
+              </p>
+              <p>
+                Cet observatoire propose une vue documentaire des <strong>vulnérabilités (CVE) Windows 10</strong> relayées par le CERT-FR dans ses bulletins après cette date, afin d'aider à prioriser la gestion du risque sur les environnements non migrés.
+              </p>
+              <div class="hero-meta">
+                <div class="hero-meta-item">Périmètre&nbsp;: CVE Windows 10 référencées par le CERT-FR</div>
+                <div class="hero-meta-item">Source principale&nbsp;: avis et actualités CERT-FR</div>
+                <div class="hero-meta-item">Nature&nbsp;: proxy documentaire, pas un scanner de parc</div>
+              </div>
+            </div>
+            <aside class="panel hero-secondary">
+              <div class="warning">
+                <div class="warning-icon">⚠️</div>
+                <div>
+                  <strong>Fin de support Windows 10</strong>
+                  <p>
+                    Le CERT-FR rappelle que Windows 10 22H2 n'est plus supporté depuis le <strong>14&nbsp;octobre&nbsp;2025</strong> et ne bénéficie plus de mises à jour de sécurité standard. Les organisations doivent planifier une migration vers un système supporté.
+                  </p>
+                </div>
+              </div>
+              <div class="source">
+                Référence CERT-FR&nbsp;: <a href="https://www.cert.ssi.gouv.fr/actualite/CERTFR-2025-ACT-017/" target="_blank" rel="noreferrer">Actualité CERTFR-2025-ACT-017</a>
+              </div>
+              <div class="text-muted">
+                Les chiffres présentés correspondent aux vulnérabilités <strong>explicitement associées à Windows 10</strong> dans les bulletins CERT-FR, sur une période donnée. Ils ne représentent ni l'ensemble des vulnérabilités de l'écosystème Windows, ni l'état de votre parc réel.
+              </div>
+            </aside>
+          </section>
+
+          <section class="panel">
+            <div class="section-title">
+              <div>
+                Indicateurs clés
+                <span id="dataset-meta" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="kpi-grid" id="kpi-grid">
+              <div class="kpi">
+                <div class="kpi-label">CVE Windows 10 référencées</div>
+                <div class="kpi-value" id="kpi-total-cve">0</div>
+                <div class="kpi-tag">
+                  <span class="kpi-tag-dot"></span>
+                  <span>Échantillon ou dataset courant</span>
+                </div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">CVE avec exploitation ou PoC</div>
+                <div class="kpi-value" id="kpi-exploited">0</div>
+                <div class="kpi-tag">
+                  <span class="kpi-tag-dot" style="background: var(--danger);"></span>
+                  <span>Signal de risque opérationnel</span>
+                </div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">CVE avec score CVSS ≥ 8</div>
+                <div class="kpi-value" id="kpi-high">0</div>
+                <div class="kpi-tag">
+                  <span class="kpi-tag-dot" style="background: var(--warning);"></span>
+                  <span>Priorisation par sévérité</span>
+                </div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">CVE publiées après le 14/10/2025</div>
+                <div class="kpi-value" id="kpi-after-eos">0</div>
+                <div class="kpi-tag">
+                  <span class="kpi-tag-dot" style="background: var(--info);"></span>
+                  <span>Tendances post-fin de support</span>
+                </div>
+              </div>
+            </div>
+            <div id="kpi-alert" class="alert" style="display:none;"></div>
+          </section>
+
+          <section class="layout-2col">
+            <section class="panel chart-wrapper">
+              <div class="section-title">
+                <div>
+                  Courbe des CVE référencées
+                  <span>(par mois et par type de risque)</span>
+                </div>
+              </div>
+              <canvas id="cveChart" height="140"></canvas>
+              <div class="chart-legend">
+                <div class="chart-legend-item">
+                  <span class="chart-dot chart-dot-total"></span>
+                  <span>Total CVE Windows 10 référencées</span>
+                </div>
+                <div class="chart-legend-item">
+                  <span class="chart-dot chart-dot-high"></span>
+                  <span>CVE avec CVSS ≥ 8</span>
+                </div>
+                <div class="chart-legend-item">
+                  <span class="chart-dot chart-dot-exploited"></span>
+                  <span>CVE avec exploitation ou PoC connu</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-title">
+                <div>Méthodologie</div>
+              </div>
+              <div class="section-body" id="methodology">
+                <p>
+                  Cet observatoire est construit comme un <strong>proxy documentaire</strong> des bulletins CERT-FR citant explicitement Windows 10 dans la période étudiée. Il ne collecte pas de données de parc ni d'informations nominatives.
+                </p>
+                <p>
+                  Pour chaque bulletin, les vulnérabilités référencées sont sélectionnées lorsqu'elles :
+                </p>
+                <ul class="bullet-list">
+                  <li>mentionnent Windows 10 dans la description, les systèmes affectés ou les produits impactés&nbsp;;</li>
+                  <li>possèdent un identifiant CVE associé&nbsp;;</li>
+                  <li>s'inscrivent dans la fenêtre temporelle définie par le jeu de données.</li>
+                </ul>
+                <p>
+                  Les indicateurs agrégés (compteurs, graphiques) sont établis à partir de ce sous-ensemble et permettent une <strong>vue de tendance</strong>, utile pour alimenter la réflexion sur la migration et la gestion de risque.
+                </p>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel">
+            <div class="section-title">
+              <div>
+                Détail des CVE Windows 10 référencées
+                <span>(filtrage local, aucune donnée envoyée côté serveur)</span>
+              </div>
+            </div>
+
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label for="search">Recherche</label>
+                <input type="text" id="search" placeholder="Filtrer par CVE, titre, CERT-FR…" />
+              </div>
+              <div class="filter-group">
+                <label for="severityFilter">CVSS</label>
+                <select id="severityFilter">
+                  <option value="all">Tous les niveaux</option>
+                  <option value="high">≥ 8 (haut/critique)</option>
+                  <option value="medium">[6, 8[ (moyen)</option>
+                  <option value="low">&lt; 6 (faible)</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="exploitationFilter">Exploitation</label>
+                <select id="exploitationFilter">
+                  <option value="all">Tous les statuts</option>
+                  <option value="known">Exploité ou PoC connu</option>
+                  <option value="none">Aucune exploitation connue</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>CVE</th>
+                    <th>Publié</th>
+                    <th>Type d'impact</th>
+                    <th>CVSS</th>
+                    <th>Exploitation</th>
+                    <th>Windows 10</th>
+                    <th>Bulletin CERT-FR</th>
+                  </tr>
+                </thead>
+                <tbody id="cveTableBody"></tbody>
+              </table>
+            </div>
+            <div class="text-muted" id="tableFootnote"></div>
+          </section>
+        </div>
+      </main>
+
+      <footer>
+        <div class="footer-inner">
+          <div>
+            Observatoire Windows 10 / CERT-FR — V2 semi-automatisée.
+            <br />
+            Données chargées localement depuis <code>./data/windows-10-certfr-data.json</code> (avec repli sur le sample en cas d'indisponibilité).
+          </div>
+          <div>
+            Références&nbsp;:
+            <a href="https://www.cert.ssi.gouv.fr/actualite/CERTFR-2025-ACT-017/" target="_blank" rel="noreferrer">CERTFR-2025-ACT-017</a>
+          </div>
+        </div>
+      </footer>
+    </div>
 
     <script>
+      console.log("init dashboard");
       const PRIMARY_DATA_URL = "./data/windows-10-certfr-data.json";
       const FALLBACK_DATA_URL = "./data/windows-10-certfr-sample-data.json";
       const EOS_DATE = new Date("2025-10-14T00:00:00Z");
+
+      function isExploitedOrPoc(status) {
+        if (!status) return false;
+        const normalized = status.toLowerCase();
+        return normalized.includes("exploite") || normalized.includes("poc");
+      }
+
+      function classifySeverity(score) {
+        if (score === null || score === undefined) return "unknown";
+        if (score >= 8) return "high";
+        if (score >= 6) return "medium";
+        return "low";
+      }
+
+      function computeKpis(cves) {
+        const total = cves.length;
+        const exploited = cves.filter((c) => isExploitedOrPoc(c.exploitation_status)).length;
+        const high = cves.filter((c) => (c.cvss_base_score || 0) >= 8).length;
+        const afterEos = cves.filter((c) => {
+          const published = c.published_at ? new Date(c.published_at + "T00:00:00Z") : null;
+          return published && published >= EOS_DATE;
+        }).length;
+
+        return { total, exploited, high, afterEos };
+      }
+
+      function groupByMonth(cves) {
+        const map = new Map();
+
+        for (const c of cves) {
+          if (!c.published_at) continue;
+          const d = new Date(c.published_at + "T00:00:00Z");
+          const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+          if (!map.has(key)) {
+            map.set(key, { total: 0, high: 0, exploited: 0 });
+          }
+          const bucket = map.get(key);
+          bucket.total += 1;
+          if ((c.cvss_base_score || 0) >= 8) bucket.high += 1;
+          if (isExploitedOrPoc(c.exploitation_status)) bucket.exploited += 1;
+        }
+
+        return Array.from(map.entries())
+          .sort(([a], [b]) => (a < b ? -1 : 1))
+          .map(([month, stats]) => ({ month, ...stats }));
+      }
+
+      function renderKpis(kpis, datasetMeta, isSample, isEmpty) {
+        document.getElementById("kpi-total-cve").textContent = kpis.total;
+        document.getElementById("kpi-exploited").textContent = kpis.exploited;
+        document.getElementById("kpi-high").textContent = kpis.high;
+        document.getElementById("kpi-after-eos").textContent = kpis.afterEos;
+
+        const metaEl = document.getElementById("dataset-meta");
+        const parts = [];
+        if (datasetMeta && datasetMeta.coverage_start && datasetMeta.coverage_end) {
+          parts.push(`fenêtre: ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end}`);
+        }
+        if (isSample) {
+          parts.push("jeu de données d'exemple");
+        }
+        metaEl.textContent = parts.length ? ` — ${parts.join(" · ")}` : "";
+
+        const alert = document.getElementById("kpi-alert");
+        if (isEmpty) {
+          alert.style.display = "block";
+          alert.textContent =
+            "Aucune CVE Windows 10 n'a été trouvée dans le périmètre actuel. Le dataset est vide ou le parsing doit être ajusté.";
+        } else {
+          alert.style.display = "none";
+          alert.textContent = "";
+        }
+      }
+
+      function renderChart(ctx, series) {
+        if (!series.length) {
+          return;
+        }
+
+        const labels = series.map((s) => s.month);
+        const total = series.map((s) => s.total);
+        const high = series.map((s) => s.high);
+        const exploited = series.map((s) => s.exploited);
+
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Total CVE Windows 10 référencées",
+                data: total,
+                borderColor: "#4f46e5",
+                backgroundColor: "rgba(79, 70, 229, 0.25)",
+                tension: 0.3,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+              },
+              {
+                label: "CVE avec CVSS ≥ 8",
+                data: high,
+                borderColor: "#f97316",
+                backgroundColor: "rgba(249, 115, 22, 0.2)",
+                tension: 0.3,
+                borderWidth: 1.6,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+              },
+              {
+                label: "CVE exploitées / PoC",
+                data: exploited,
+                borderColor: "#f97373",
+                backgroundColor: "rgba(248, 113, 113, 0.2)",
+                tension: 0.3,
+                borderWidth: 1.6,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+              },
+            ],
+          },
+          options: {
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              x: {
+                grid: { color: "rgba(31, 41, 55, 0.7)" },
+                ticks: { color: "#9ca3af", maxRotation: 0 },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "rgba(31, 41, 55, 0.7)" },
+                ticks: { color: "#9ca3af", stepSize: 1 },
+              },
+            },
+          },
+        });
+      }
+
+      function matchesFilters(cve, filters) {
+        const { text, severity, exploitation } = filters;
+
+        if (text) {
+          const haystack = `${cve.cve_id} ${cve.title || ""} ${cve.certfr_id || ""}`.toLowerCase();
+          if (!haystack.includes(text.toLowerCase())) return false;
+        }
+
+        if (severity !== "all") {
+          const bucket = classifySeverity(cve.cvss_base_score || 0);
+          if (severity === "high" && bucket !== "high") return false;
+          if (severity === "medium" && bucket !== "medium") return false;
+          if (severity === "low" && bucket !== "low") return false;
+        }
+
+        if (exploitation !== "all") {
+          const exploited = isExploitedOrPoc(cve.exploitation_status || "");
+          if (exploitation === "known" && !exploited) return false;
+          if (exploitation === "none" && exploited) return false;
+        }
+
+        return true;
+      }
+
+      function renderTable(cves, filters) {
+        const tbody = document.getElementById("cveTableBody");
+        tbody.innerHTML = "";
+
+        const filtered = cves.filter((c) => matchesFilters(c, filters));
+
+        for (const cve of filtered) {
+          const tr = document.createElement("tr");
+
+          const tdId = document.createElement("td");
+          const link = document.createElement("a");
+          link.href = cve.certfr_url || "#";
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          link.textContent = cve.cve_id || "N/A";
+          link.className = "link-inline";
+          tdId.appendChild(link);
+
+          const tdDate = document.createElement("td");
+          tdDate.textContent = cve.published_at || "—";
+
+          const tdImpact = document.createElement("td");
+          tdImpact.textContent = cve.impact_type || "—";
+
+          const tdCvss = document.createElement("td");
+          const score = cve.cvss_base_score;
+          const scoreStr = typeof score === "number" ? score.toFixed(1) : "—";
+          const badge = document.createElement("span");
+          badge.className = "pill-badge";
+          const bucket = classifySeverity(score || 0);
+          if (bucket === "high") badge.classList.add("warning");
+          if (bucket === "medium") badge.classList.add("info");
+          badge.textContent = scoreStr;
+          tdCvss.appendChild(badge);
+
+          const tdExploit = document.createElement("td");
+          const exploitBadge = document.createElement("span");
+          exploitBadge.className = "pill-badge";
+          const exploited = isExploitedOrPoc(cve.exploitation_status || "");
+          if (exploited) {
+            exploitBadge.classList.add("danger");
+            exploitBadge.textContent = cve.exploitation_status || "Exploitation connue";
+          } else {
+            exploitBadge.classList.add("info");
+            exploitBadge.textContent = cve.exploitation_status || "Aucune exploitation connue";
+          }
+          tdExploit.appendChild(exploitBadge);
+
+          const tdVersions = document.createElement("td");
+          tdVersions.textContent = (cve.windows_10_versions || []).join(", ") || "—";
+
+          const tdCert = document.createElement("td");
+          const certInfo = document.createElement("div");
+          certInfo.textContent = cve.certfr_id || "—";
+          const certMeta = document.createElement("div");
+          certMeta.className = "tag-small";
+          certMeta.textContent = cve.source_type || "";
+          tdCert.appendChild(certInfo);
+          tdCert.appendChild(certMeta);
+
+          tr.appendChild(tdId);
+          tr.appendChild(tdDate);
+          tr.appendChild(tdImpact);
+          tr.appendChild(tdCvss);
+          tr.appendChild(tdExploit);
+          tr.appendChild(tdVersions);
+          tr.appendChild(tdCert);
+
+          tbody.appendChild(tr);
+        }
+
+        const footnote = document.getElementById("tableFootnote");
+        footnote.textContent = `${filtered.length} entrée(s) sur ${cves.length} au total — filtrage effectué localement dans votre navigateur.`;
+      }
 
       async function loadDataset() {
         try {
@@ -27,18 +975,69 @@
           if (!res.ok) {
             throw new Error("dataset prod indisponible");
           }
-          return await res.json();
+          console.log("Dataset principal chargé");
+          return { data: await res.json(), isSample: false };
         } catch (err) {
           console.warn("[INFO] Fallback sur le jeu de données d'exemple:", err);
-          const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
-          if (!res.ok) {
-            throw new Error("Impossible de charger le dataset d'exemple");
+          try {
+            const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
+            if (!res.ok) {
+              throw new Error("Impossible de charger le dataset d'exemple");
+            }
+            console.log("Dataset d'exemple chargé");
+            return { data: await res.json(), isSample: true };
+          } catch (fallbackErr) {
+            console.error("[ERROR] Impossible de charger les datasets:", fallbackErr);
+            const alert = document.getElementById("kpi-alert");
+            alert.style.display = "block";
+            alert.textContent =
+              "Erreur lors du chargement des données locales. Vérifiez la présence des fichiers JSON dans le répertoire data/.";
+            return { data: { dataset: {}, cves: [] }, isSample: true };
           }
-          return await res.json();
         }
       }
 
-      /* reste du JS V1 (computeKpis, groupByMonth, renderChart, renderTable, etc.) inchangé */
+      async function bootstrap() {
+        const { data, isSample } = await loadDataset();
+        const dataset = data.dataset || {};
+        const cves = data.cves || [];
+        const isEmpty = !cves.length;
+
+        const kpis = computeKpis(cves);
+        renderKpis(kpis, dataset, isSample, isEmpty);
+
+        const series = groupByMonth(cves);
+        const ctx = document.getElementById("cveChart").getContext("2d");
+        renderChart(ctx, series);
+
+        const filters = {
+          text: "",
+          severity: "all",
+          exploitation: "all",
+        };
+        renderTable(cves, filters);
+
+        const searchInput = document.getElementById("search");
+        const severitySelect = document.getElementById("severityFilter");
+        const exploitationSelect = document.getElementById("exploitationFilter");
+
+        searchInput.addEventListener("input", () => {
+          filters.text = searchInput.value;
+          renderTable(cves, filters);
+        });
+
+        severitySelect.addEventListener("change", () => {
+          filters.severity = severitySelect.value;
+          renderTable(cves, filters);
+        });
+
+        exploitationSelect.addEventListener("change", () => {
+          filters.exploitation = exploitationSelect.value;
+          renderTable(cves, filters);
+        });
+      }
+
+      bootstrap();
     </script>
   </body>
 </html>
