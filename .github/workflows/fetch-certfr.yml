@@ -29,6 +29,7 @@ jobs:
           python tools/fetch_certfr_win10.py
 
       - name: Commit and push updated dataset
+        if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
