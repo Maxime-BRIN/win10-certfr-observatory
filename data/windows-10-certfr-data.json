@@ -2,7 +2,7 @@
   "dataset": {
     "name": "Observatoire Windows 10 / CERT-FR (données réelles)",
     "version": "0.3.0",
-    "generated_at": "2026-04-13T13:16:44.114235Z",
+    "generated_at": "2026-04-13T13:21:57.241637Z",
     "coverage_start": "2025-10-14",
     "coverage_end": "2026-04-13",
     "windows_10_eos_date": "2025-10-14",
@@ -19,7 +19,7 @@
       "cve_id": "CVE-2026-21510",
       "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
       "published_at": null,
-      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "impact_type": "Contournement de la politique de sécurité",
       "cvss_base_score": 8.8,
       "exploitation_status": "none",
       "windows_10_versions": [
@@ -40,7 +40,7 @@
       "cve_id": "CVE-2026-21513",
       "title": "Windows 10 1809, Windows 10 21H2, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2016, Windows Server 2022 23H2, Windows 11 24H2, Windows Server 2022, Windows Server 2025, Windows Server 2012, Windows Server 2019",
       "published_at": null,
-      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "impact_type": "Contournement de la politique de sécurité",
       "cvss_base_score": 8.8,
       "exploitation_status": "none",
       "windows_10_versions": [
@@ -61,7 +61,7 @@
       "cve_id": "CVE-2026-21519",
       "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016",
       "published_at": null,
-      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "impact_type": "Contournement de la politique de sécurité",
       "cvss_base_score": 7.8,
       "exploitation_status": "none",
       "windows_10_versions": [
@@ -82,7 +82,7 @@
       "cve_id": "CVE-2026-21533",
       "title": "Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows 10 1809, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
       "published_at": null,
-      "impact_type": "Contournement de la politique de sÃ©curitÃ©",
+      "impact_type": "Contournement de la politique de sécurité",
       "cvss_base_score": 7.8,
       "exploitation_status": "none",
       "windows_10_versions": [
@@ -103,7 +103,7 @@
       "cve_id": "CVE-2026-21525",
       "title": "Windows 10 1809, Windows 10 21H2, Windows Server 2022, Windows 11 23H2, Windows 10 1607, Windows 10 22H2, Windows 11 25H2, Windows Server 2025, Windows Server 2019, Windows 11 24H2, Windows Server 2022 23H2, Windows Server 2016, Windows Server 2012",
       "published_at": null,
-      "impact_type": "DÃ©ni de service",
+      "impact_type": "Déni de service",
       "cvss_base_score": 6.2,
       "exploitation_status": "none",
       "windows_10_versions": [
