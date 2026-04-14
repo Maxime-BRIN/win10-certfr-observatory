@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Observatoire Windows 10 / CERT-FR</title>
+  <title>Observatoire Windows 10 – données NVD</title>
   <link rel="icon" href="data:," />
   <style>
     :root {
@@ -306,7 +306,7 @@
       <div class="header-inner">
         <div class="title-block">
           <div>
-            <div class="title">Observatoire Windows 10 / CERT-FR</div>
+            <div class="title">Observatoire Windows 10 – données NVD reconstruites</div>
             <div class="panel-subtitle" id="dataset-meta"></div>
           </div>
           <span class="badge">post-EOS Windows 10</span>
@@ -327,17 +327,17 @@
             <div class="kpi">
               <div class="kpi-label">CVE Windows 10 référencées</div>
               <div class="kpi-value" id="kpi-total-cves">0</div>
-              <div class="kpi-meta">Depuis le 14/10/2025</div>
+              <div class="kpi-meta">Depuis le 14/10/2025 (NVD)</div>
             </div>
             <div class="kpi">
               <div class="kpi-label">CVE avec CVSS ≥ 8</div>
               <div class="kpi-value" id="kpi-critical-cves">0</div>
-              <div class="kpi-meta">Gravité élevée et critique</div>
+              <div class="kpi-meta">Gravité élevée et critique (NVD)</div>
             </div>
             <div class="kpi">
               <div class="kpi-label">CVE avec exploitation ou PoC</div>
               <div class="kpi-value" id="kpi-exploited-cves">0</div>
-              <div class="kpi-meta">Signalées comme exploitées ou PoC</div>
+              <div class="kpi-meta">Champ reconstruit (statut générique pour l'instant)</div>
             </div>
           </div>
           <div id="kpi-alert" class="alert" style="display:none;">
@@ -350,7 +350,7 @@
         <section class="panel">
           <div class="panel-header">
             <div class="panel-title">Volume de CVE Windows 10 dans le temps</div>
-            <div class="panel-subtitle">Agrégé par mois de publication</div>
+            <div class="panel-subtitle">Agrégé par mois de publication (NVD)</div>
           </div>
           <div class="chart-container">
             <canvas id="cve-chart"></canvas>
@@ -389,7 +389,7 @@
                 <th>Score</th>
                 <th>Type d'impact</th>
                 <th>Versions Windows 10</th>
-                <th>CERT-FR</th>
+                <th>Références supplémentaires</th>
               </tr>
             </thead>
             <tbody id="cve-table-body"></tbody>
@@ -464,10 +464,10 @@
 
       const metaEl = document.getElementById("dataset-meta");
       if (datasetMeta && datasetMeta.coverage_start && datasetMeta.coverage_end) {
-        const label = `Périmètre : ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end}`;
-        metaEl.textContent = label + (kpis.isSample ? " · jeu de données d'exemple" : " · données réelles");
+        const label = `Périmètre : ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end} (NVD)`;
+        metaEl.textContent = label + (kpis.isSample ? " · jeu de données d'exemple" : " · données reconstruites");
       } else {
-        metaEl.textContent = kpis.isSample ? "Jeu de données d'exemple" : "Jeu de données réel";
+        metaEl.textContent = kpis.isSample ? "Jeu de données d'exemple" : "Jeu de données reconstruites (NVD)";
       }
 
       if (kpis.total === 0) {
@@ -512,7 +512,7 @@
           labels,
           datasets: [
             {
-              label: "CVE Windows 10 / mois",
+              label: "CVE Windows 10 / mois (NVD)",
               data,
               backgroundColor: "rgba(37, 99, 235, 0.35)",
               borderColor: "rgba(37, 99, 235, 1)",
@@ -602,8 +602,9 @@
           <td>${(c.windows_10_versions || []).join(", ")}</td>
           <td>
             ${c.certfr_url
-              ? `<a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERT-FR"}</a>`
-              : ""}
+              ? `<a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "Lien"}</a>`
+              : ""
+            }
           </td>
         `;
 
