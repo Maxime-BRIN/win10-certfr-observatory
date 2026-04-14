@@ -12,20 +12,21 @@
 
   <style>
     :root {
-      --bg:            #1d1e20;
-      --bg-panel:      #2a2d31;
-      --bg-panel-2:    #343a40;
-      --bg-hover:      #3a4047;
-      --border:        rgba(255,255,255,0.08);
-      --border-strong: rgba(255,255,255,0.14);
+      /* ─ Palette claire ─ */
+      --bg:            #f4f6f8;
+      --bg-panel:      #ffffff;
+      --bg-panel-2:    #f8f9fa;
+      --bg-hover:      #eef2f6;
+      --border:        rgba(52,58,64,0.10);
+      --border-strong: rgba(52,58,64,0.18);
 
-      --text:          #ffffff;
-      --text-muted:    #adb5bd;
-      --text-faint:    #6c757d;
+      --text:          #1d1e20;
+      --text-muted:    #495057;
+      --text-faint:    #868e96;
 
       --accent:        #007acc;
-      --accent-dim:    rgba(0,122,204,0.12);
-      --accent-hover:  #0090ee;
+      --accent-dim:    rgba(0,122,204,0.10);
+      --accent-hover:  #005fa3;
 
       /* CVSS severity */
       --sev-none:     #6b7280;
@@ -66,17 +67,18 @@
       width: 100%;
     }
 
-    /* Panel */
+    /* ─ Panel ─ */
     .panel {
       background: var(--bg-panel);
       border-radius: var(--radius);
       border: 1px solid var(--border);
       padding: 1.1rem 1.2rem;
+      box-shadow: 0 1px 3px rgba(29,30,32,0.06);
     }
 
     .panel-header {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       margin-bottom: 0.85rem;
       gap: 0.5rem;
@@ -88,10 +90,9 @@
       font-weight: 700;
       color: var(--text);
     }
+    .panel-sub { font-size: 0.75rem; color: var(--text-faint); }
 
-    .panel-sub { font-size: 0.75rem; color: var(--text-muted); }
-
-    /* Top grid */
+    /* ─ Top grid ─ */
     .top-grid {
       display: grid;
       grid-template-columns: minmax(0,2fr) minmax(0,3fr);
@@ -99,42 +100,65 @@
     }
     @media (max-width: 860px) { .top-grid { grid-template-columns: 1fr; } }
 
-    /* KPIs */
+    /* ─ KPIs ─ */
     .kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.65rem; }
     @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2,1fr); } }
 
     .kpi {
-      padding: 0.85rem 0.9rem;
+      padding: 0.9rem 1rem;
       border-radius: var(--radius-sm);
       background: var(--bg-panel-2);
       border: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 0.25rem;
-      transition: border-color var(--transition);
+      display: flex; flex-direction: column; gap: 0.3rem;
+      transition: border-color var(--transition), box-shadow var(--transition);
     }
-    .kpi:hover { border-color: var(--border-strong); }
+    .kpi:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,122,204,0.08); }
 
-    .kpi-label { font-size: 0.72rem; color: var(--text-muted); line-height: 1.3; }
+    .kpi-label { font-size: 0.72rem; color: var(--text-muted); line-height: 1.3; font-weight: 500; }
     .kpi-value {
       font-family: var(--font-display);
-      font-size: 1.75rem; font-weight: 900;
-      color: var(--accent); line-height: 1; letter-spacing: -0.02em;
+      font-size: 2rem; font-weight: 900;
+      color: var(--accent); line-height: 1; letter-spacing: -0.03em;
+      /* count-up animation support */
+      display: inline-block;
     }
     .kpi-meta { font-size: 0.68rem; color: var(--text-faint); line-height: 1.3; }
 
+    /* KPI count-up flash */
+    @keyframes kpi-pop {
+      0%   { transform: scale(0.85); opacity: 0.3; }
+      60%  { transform: scale(1.06); }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    .kpi-value.animating { animation: kpi-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+
     .alert {
-      margin-top: 0.5rem;
-      padding: 0.5rem 0.7rem;
+      margin-top: 0.5rem; padding: 0.5rem 0.7rem;
       border-radius: var(--radius-sm);
       background: rgba(255,193,7,0.08);
-      border: 1px solid rgba(255,193,7,0.25);
-      font-size: 0.78rem;
-      color: #ffc107;
+      border: 1px solid rgba(255,193,7,0.3);
+      font-size: 0.78rem; color: #92620a;
     }
 
-    /* Chart */
-    .chart-container { position: relative; height: 200px; }
+    /* ─ Chart ─ */
+    .chart-container { position: relative; height: 200px; cursor: pointer; }
 
-    /* Table section */
+    /* Active month filter pill */
+    .month-filter-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-pill);
+      background: var(--accent-dim);
+      border: 1px solid rgba(0,122,204,0.3);
+      color: var(--accent);
+      font-size: 0.72rem; font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .month-filter-badge:hover { background: rgba(0,122,204,0.18); }
+    .month-filter-badge .x { opacity: 0.7; font-size: 0.8em; margin-left: 0.1rem; }
+
+    /* ─ Table section ─ */
     .table-panel { overflow: hidden; }
 
     .table-toolbar {
@@ -143,6 +167,7 @@
       margin-bottom: 0.85rem;
     }
 
+    .toolbar-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .filters { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 
     .filter-chip {
@@ -160,7 +185,7 @@
     .filter-chip.active {
       background: var(--accent-dim);
       border-color: var(--accent);
-      color: var(--accent);
+      color: var(--accent); font-weight: 600;
     }
 
     .sort-select {
@@ -173,15 +198,14 @@
     }
     .sort-select:hover, .sort-select:focus { border-color: var(--accent); outline: none; }
 
-    /* Table */
+    /* ─ Table ─ */
     .table-wrapper { overflow-x: auto; }
-
     table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    thead tr { border-bottom: 1px solid var(--border-strong); }
+    thead tr { border-bottom: 2px solid var(--border-strong); }
     th {
       padding: 0.5rem 0.6rem; text-align: left;
-      font-size: 0.7rem; font-weight: 600;
-      letter-spacing: 0.04em; text-transform: uppercase;
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
       color: var(--text-faint); white-space: nowrap;
     }
     td {
@@ -196,10 +220,11 @@
     .cve-id {
       font-family: 'Courier New', monospace;
       font-size: 0.76rem; color: var(--accent); white-space: nowrap;
+      font-weight: 600;
     }
     .date-cell { color: var(--text-muted); white-space: nowrap; }
 
-    /* NVD Badge */
+    /* ─ NVD Badge ─ */
     .nvd-badge {
       display: inline-flex; align-items: center;
       text-decoration: none; border-radius: 4px; overflow: hidden;
@@ -208,137 +233,94 @@
       transition: opacity var(--transition), transform var(--transition);
       white-space: nowrap;
     }
-    .nvd-badge:hover { opacity: 0.8; transform: translateY(-1px); }
-    .nvd-badge-score { padding: 0.28rem 0.42rem; background: #1d1e20; color: #fff; }
+    .nvd-badge:hover { opacity: 0.85; transform: translateY(-1px); }
+    .nvd-badge-score { padding: 0.28rem 0.42rem; background: #343a40; color: #fff; }
     .nvd-badge-label { padding: 0.28rem 0.48rem; color: #fff; letter-spacing: 0.05em; text-transform: uppercase; }
-    .nvd-sev-none     { background: #4b5563; }
+    .nvd-sev-none     { background: #6b7280; }
     .nvd-sev-low      { background: #a16207; }
     .nvd-sev-medium   { background: #c2410c; }
     .nvd-sev-high     { background: #b91c1c; }
     .nvd-sev-critical { background: #7e22ce; }
     .score-loading { color: var(--text-faint); font-style: italic; }
 
-    /* Vector badges */
+    /* ─ Vector badges ─ */
     .vector-cell { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
     .vec-badge {
       display: inline-flex; align-items: center;
       padding: 0.14rem 0.38rem; border-radius: 3px;
       font-size: 0.66rem; font-weight: 600; line-height: 1.3; white-space: nowrap;
     }
-    .vec-av-n  { background:rgba(239,68,68,.15);  color:#f87171; border:1px solid rgba(239,68,68,.3); }
-    .vec-av-a  { background:rgba(251,191,36,.12); color:#fbbf24; border:1px solid rgba(251,191,36,.3); }
-    .vec-av-l  { background:rgba(0,186,154,.12);  color:#00ba9a; border:1px solid rgba(0,186,154,.3); }
-    .vec-av-p  { background:rgba(0,122,204,.12);  color:#60c0ff; border:1px solid rgba(0,122,204,.3); }
-    .vec-pr-n  { background:rgba(239,68,68,.15);  color:#f87171; border:1px solid rgba(239,68,68,.3); }
-    .vec-pr-l  { background:rgba(251,191,36,.12); color:#fbbf24; border:1px solid rgba(251,191,36,.3); }
-    .vec-pr-h  { background:rgba(0,186,154,.12);  color:#00ba9a; border:1px solid rgba(0,186,154,.3); }
-    .vec-ui-n  { background:rgba(239,68,68,.15);  color:#f87171; border:1px solid rgba(239,68,68,.3); }
-    .vec-ui-r  { background:rgba(0,186,154,.12);  color:#00ba9a; border:1px solid rgba(0,186,154,.3); }
-    .vec-unknown { background:rgba(255,255,255,.05); color:var(--text-faint); border:1px solid var(--border); }
+    .vec-av-n  { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+    .vec-av-a  { background:#fef9c3; color:#92620a; border:1px solid #fde047; }
+    .vec-av-l  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .vec-av-p  { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+    .vec-pr-n  { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+    .vec-pr-l  { background:#fef9c3; color:#92620a; border:1px solid #fde047; }
+    .vec-pr-h  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .vec-ui-n  { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+    .vec-ui-r  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .vec-unknown { background:#f3f4f6; color:var(--text-faint); border:1px solid var(--border); }
 
-    /* Refs */
+    /* ─ Refs ─ */
     .refs-cell { display:flex; flex-wrap:wrap; align-items:center; gap:0.3rem; }
     .refs-cell a { font-size:.75rem; color:var(--text-muted); text-decoration:none; transition:color var(--transition); }
-    .refs-cell a:hover { color:var(--accent); }
+    .refs-cell a:hover { color:var(--accent); text-decoration:underline; }
     .refs-sep { color:var(--text-faint); }
 
-    /* Versions */
+    /* ─ Versions ─ */
     .versions-cell { display:flex; flex-wrap:wrap; gap:0.2rem; }
     .ver-badge {
-      padding:.1rem .35rem; border-radius:3px;
-      font-size:.65rem; font-weight:500;
-      background:rgba(255,255,255,.06); color:var(--text-muted);
-      border:1px solid var(--border); white-space:nowrap;
+      padding:.12rem .38rem; border-radius:3px;
+      font-size:.65rem; font-weight:600;
+      background:#e9ecef; color:#495057;
+      border:1px solid #dee2e6; white-space:nowrap;
     }
 
-    /* ── Pagination ────────────────────────────────────── */
+    /* ─ Pagination ─ */
     .pagination-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-top: 0.9rem;
+      display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap;
+      gap: 0.6rem; margin-top: 0.9rem;
       padding-top: 0.75rem;
       border-top: 1px solid var(--border);
     }
-
-    .pagination-info { font-size: 0.75rem; color: var(--text-muted); }
-
+    .pagination-info { font-size: 0.75rem; color: var(--text-faint); }
     .pagination-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-
     .page-size-group { display: flex; align-items: center; gap: 0.25rem; }
     .page-size-label { font-size: 0.72rem; color: var(--text-faint); }
-
     .page-size-btn {
       padding: 0.24rem 0.6rem;
       border-radius: var(--radius-pill);
       border: 1px solid var(--border-strong);
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 0.72rem;
-      font-family: var(--font-body);
-      cursor: pointer;
-      transition: all var(--transition);
+      background: transparent; color: var(--text-muted);
+      font-size: 0.72rem; font-family: var(--font-body);
+      cursor: pointer; transition: all var(--transition);
     }
     .page-size-btn:hover { border-color: var(--accent); color: var(--text); }
     .page-size-btn.active {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      color: var(--accent);
-      font-weight: 600;
+      background: var(--accent); border-color: var(--accent);
+      color: #fff; font-weight: 700;
     }
-
     .page-nav { display: flex; align-items: center; gap: 0.3rem; }
-
     .page-btn {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 1.8rem; height: 1.8rem;
-      padding: 0 0.35rem;
+      min-width: 1.8rem; height: 1.8rem; padding: 0 0.35rem;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-strong);
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      font-family: var(--font-body);
-      cursor: pointer;
-      transition: all var(--transition);
+      background: transparent; color: var(--text-muted);
+      font-size: 0.75rem; font-family: var(--font-body);
+      cursor: pointer; transition: all var(--transition);
     }
-    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
-    .page-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .page-ellipsis { color: var(--text-faint); font-size: 0.75rem; padding: 0 0.2rem; }
-
-    /* Footer */
-    .site-footer {
-      margin-top: auto;
-      border-top: 1px solid var(--border);
-      background: var(--bg-panel);
-      padding: 2rem 1.25rem;
-    }
-    .footer-inner {
-      max-width: 1140px; margin: 0 auto;
-      display: flex; flex-wrap: wrap; gap: 1.5rem;
-      align-items: flex-start; justify-content: space-between;
-    }
-    .footer-brand { font-family:var(--font-display); font-weight:900; font-size:1rem; color:#fff; }
-    .footer-brand span { color:var(--accent); }
-    .footer-links { display:flex; flex-direction:column; gap:0.35rem; }
-    .footer-links a { font-size:.78rem; color:var(--text-muted); text-decoration:none; transition:color var(--transition); }
-    .footer-links a:hover { color:var(--accent); }
-    .footer-copy { font-size:.72rem; color:var(--text-faint); align-self:flex-end; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="page">
-
   <main>
 
     <!-- KPIs + Chart -->
@@ -371,7 +353,7 @@
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">Volume dans le temps</span>
-          <span class="panel-sub">Agrégé par mois de publication (NVD)</span>
+          <span class="panel-sub">Cliquez sur une barre pour filtrer le tableau</span>
         </div>
         <div class="chart-container"><canvas id="cve-chart"></canvas></div>
       </div>
@@ -381,7 +363,10 @@
     <!-- Table -->
     <section class="panel table-panel">
       <div class="table-toolbar">
-        <span class="panel-title">CVE Windows 10 détaillées</span>
+        <div class="toolbar-left">
+          <span class="panel-title">CVE Windows 10 détaillées</span>
+          <span id="month-filter-badge-container"></span>
+        </div>
         <div class="filters">
           <label class="filter-chip" id="chip-critical">
             <input type="checkbox" id="filter-critical" />CVSS ≥ 8
@@ -414,12 +399,11 @@
         </table>
       </div>
 
-      <!-- Pagination bar -->
       <div class="pagination-bar">
         <div class="pagination-info" id="pagination-info"></div>
         <div class="pagination-controls">
           <div class="page-size-group">
-            <span class="page-size-label">Afficher :</span>
+            <span class="page-size-label">Afficher :</span>
             <button class="page-size-btn active" data-size="25">25</button>
             <button class="page-size-btn" data-size="50">50</button>
             <button class="page-size-btn" data-size="100">100</button>
@@ -431,86 +415,70 @@
     </section>
 
   </main>
-
-  <footer class="site-footer">
-    <div class="footer-inner">
-      <div>
-        <div class="footer-brand">Maxime <span>BRIN</span></div>
-        <div style="font-size:.75rem;color:var(--text-faint);margin-top:.25rem;">Administrateur Systèmes &amp; Réseaux</div>
-      </div>
-      <div class="footer-links">
-        <a href="https://mbrin.fr" target="_blank" rel="noopener noreferrer">↩ Retour au portfolio</a>
-        <a href="methodology.html" target="_blank" rel="noopener noreferrer">Méthodologie</a>
-        <a href="https://github.com/Maxime-BRIN/win10-cve-observatory" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://nvd.nist.gov/" target="_blank" rel="noopener noreferrer">Source : NVD NIST</a>
-      </div>
-      <div class="footer-copy">© 2025 Maxime BRIN · Données NVD</div>
-    </div>
-  </footer>
-
 </div>
 
 <script>
-  /* ── Chip toggle ─────────────────────────────────────── */
+  /* ── Chip toggle ────────────────────────────────────── */
   document.querySelectorAll('.filter-chip').forEach(chip => {
     const cb = chip.querySelector('input[type="checkbox"]');
     if (!cb) return;
     cb.addEventListener('change', () => chip.classList.toggle('active', cb.checked));
   });
 
-  /* ── Constants ───────────────────────────────────────── */
+  /* ── Constants ─────────────────────────────────────── */
   const PRIMARY_DATA_URL  = "./data/windows-10-cve-data.json";
   const FALLBACK_DATA_URL = "./data/windows-10-cve-sample-data.json";
   const NVD_API_BASE      = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=";
 
-  const nvdCache = new Map();
-  let allCves = [];
+  const nvdCache  = new Map();
+  let allCves     = [];
   let filteredCves = [];
   let chartInstance = null;
+  let activeMonthFilter = null; // "2026-03" or null
 
-  /* Pagination state */
+  /* Pagination */
   let currentPage = 1;
-  let pageSize    = 25; // 0 = ALL
+  let pageSize    = 25;
 
-  /* ── CVSS helpers ────────────────────────────────────── */
+  /* ── CVSS helpers ──────────────────────────────────── */
   function cvssInfo(score) {
-    if (score === null || score === undefined || Number.isNaN(score)) return { label: "N/A", cls: "nvd-sev-none" };
-    if (score === 0)  return { label: "NONE",     cls: "nvd-sev-none" };
-    if (score < 4.0)  return { label: "LOW",      cls: "nvd-sev-low" };
-    if (score < 7.0)  return { label: "MEDIUM",   cls: "nvd-sev-medium" };
-    if (score < 9.0)  return { label: "HIGH",     cls: "nvd-sev-high" };
-    return              { label: "CRITICAL", cls: "nvd-sev-critical" };
+    if (score == null || Number.isNaN(score)) return { label:"N/A", cls:"nvd-sev-none" };
+    if (score === 0)  return { label:"NONE",     cls:"nvd-sev-none" };
+    if (score < 4.0)  return { label:"LOW",      cls:"nvd-sev-low" };
+    if (score < 7.0)  return { label:"MEDIUM",   cls:"nvd-sev-medium" };
+    if (score < 9.0)  return { label:"HIGH",     cls:"nvd-sev-high" };
+    return              { label:"CRITICAL", cls:"nvd-sev-critical" };
   }
 
   function buildNvdBadge(cveId, score) {
-    const nvdUrl = `https://nvd.nist.gov/vuln/detail/${cveId}`;
+    const url = `https://nvd.nist.gov/vuln/detail/${cveId}`;
     const sev = cvssInfo(score);
-    const d = (score !== null && !Number.isNaN(score)) ? score.toFixed(1) : "N/A";
-    return `<a href="${nvdUrl}" target="_blank" rel="noopener noreferrer" class="nvd-badge"
-      title="Voir ${cveId} sur NVD (Base Score ${d} – ${sev.label})"
+    const d   = (score != null && !Number.isNaN(score)) ? score.toFixed(1) : "N/A";
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="nvd-badge"
+      title="${cveId} – Base Score ${d} (${sev.label})"
     ><span class="nvd-badge-score">${d}</span><span class="nvd-badge-label ${sev.cls}">${sev.label}</span></a>`;
   }
 
   function parseCvssVector(v) {
     if (!v) return null;
     const map = {};
-    for (const p of v.split("/")) { const [k,val] = p.split(":"); if (k&&val) map[k.toUpperCase()] = val.toUpperCase(); }
+    for (const p of v.split("/")) { const [k,val]=p.split(":"); if(k&&val) map[k.toUpperCase()]=val.toUpperCase(); }
     if (!map["AV"]) return null;
-    return { av: map["AV"], pr: map["PR"]||null, ui: map["UI"]||null };
+    return { av:map["AV"], pr:map["PR"]||null, ui:map["UI"]||null };
   }
 
-  function buildVectorBadges(vectorString) {
-    const parsed = parseCvssVector(vectorString);
-    if (!parsed) return `<span class="vec-badge vec-unknown">–</span>`;
-    const avL = {N:"Network",A:"Adjacent",L:"Local",P:"Physical"};
-    const avC = {N:"vec-av-n",A:"vec-av-a",L:"vec-av-l",P:"vec-av-p"};
-    const prL = {N:"PR: None",L:"PR: Low",H:"PR: High"};
-    const prC = {N:"vec-pr-n",L:"vec-pr-l",H:"vec-pr-h"};
-    const uiL = {N:"UI: None",R:"UI: Req."};
-    const uiC = {N:"vec-ui-n",R:"vec-ui-r"};
-    const av = `<span class="vec-badge ${avC[parsed.av]||'vec-unknown'}" title="AV: ${avL[parsed.av]||parsed.av}">${avL[parsed.av]||parsed.av}</span>`;
-    const pr = parsed.pr ? `<span class="vec-badge ${prC[parsed.pr]||'vec-unknown'}" title="PR: ${parsed.pr}">${prL[parsed.pr]||'PR:'+parsed.pr}</span>` : "";
-    const ui = parsed.ui ? `<span class="vec-badge ${uiC[parsed.ui]||'vec-unknown'}" title="UI: ${parsed.ui}">${uiL[parsed.ui]||'UI:'+parsed.ui}</span>` : "";
+  function buildVectorBadges(vs) {
+    const p = parseCvssVector(vs);
+    if (!p) return `<span class="vec-badge vec-unknown">–</span>`;
+    const avL={N:"Network",A:"Adjacent",L:"Local",P:"Physical"};
+    const avC={N:"vec-av-n",A:"vec-av-a",L:"vec-av-l",P:"vec-av-p"};
+    const prL={N:"PR: None",L:"PR: Low",H:"PR: High"};
+    const prC={N:"vec-pr-n",L:"vec-pr-l",H:"vec-pr-h"};
+    const uiL={N:"UI: None",R:"UI: Req."};
+    const uiC={N:"vec-ui-n",R:"vec-ui-r"};
+    const av=`<span class="vec-badge ${avC[p.av]||'vec-unknown'}" title="AV:${avL[p.av]||p.av}">${avL[p.av]||p.av}</span>`;
+    const pr=p.pr?`<span class="vec-badge ${prC[p.pr]||'vec-unknown'}" title="PR:${p.pr}">${prL[p.pr]||'PR:'+p.pr}</span>`:"";
+    const ui=p.ui?`<span class="vec-badge ${uiC[p.ui]||'vec-unknown'}" title="UI:${p.ui}">${uiL[p.ui]||'UI:'+p.ui}</span>`:"";
     return `<div class="vector-cell">${av}${pr}${ui}</div>`;
   }
 
@@ -519,59 +487,75 @@
     return `<div class="versions-cell">${versions.map(v=>`<span class="ver-badge">${v}</span>`).join('')}</div>`;
   }
 
-  /* ── NVD API ─────────────────────────────────────────── */
+  /* ── NVD API ────────────────────────────────────────── */
   async function fetchNvdData(cveId) {
     if (nvdCache.has(cveId)) return nvdCache.get(cveId);
     try {
-      const res = await fetch(`${NVD_API_BASE}${cveId}`, { headers: { "Accept": "application/json" } });
+      const res = await fetch(`${NVD_API_BASE}${cveId}`,{headers:{"Accept":"application/json"}});
       if (!res.ok) { nvdCache.set(cveId,{score:null,vector:null}); return nvdCache.get(cveId); }
       const json = await res.json();
       const vuln = json?.vulnerabilities?.[0]?.cve;
-      if (!vuln) { nvdCache.set(cveId,{score:null,vector:null}); return nvdCache.get(cveId); }
-      const m = vuln.metrics || {};
-      let score=null, vector=null;
-      if (m.cvssMetricV31?.length)      { score=m.cvssMetricV31[0].cvssData?.baseScore??null; vector=m.cvssMetricV31[0].cvssData?.vectorString??null; }
+      if (!vuln)  { nvdCache.set(cveId,{score:null,vector:null}); return nvdCache.get(cveId); }
+      const m=vuln.metrics||{};
+      let score=null,vector=null;
+      if      (m.cvssMetricV31?.length) { score=m.cvssMetricV31[0].cvssData?.baseScore??null; vector=m.cvssMetricV31[0].cvssData?.vectorString??null; }
       else if (m.cvssMetricV30?.length) { score=m.cvssMetricV30[0].cvssData?.baseScore??null; vector=m.cvssMetricV30[0].cvssData?.vectorString??null; }
       else if (m.cvssMetricV2?.length)  { score=m.cvssMetricV2[0].cvssData?.baseScore??null;  vector=m.cvssMetricV2[0].cvssData?.vectorString??null; }
-      nvdCache.set(cveId,{score,vector});
-      return nvdCache.get(cveId);
+      nvdCache.set(cveId,{score,vector}); return nvdCache.get(cveId);
     } catch { nvdCache.set(cveId,{score:null,vector:null}); return nvdCache.get(cveId); }
   }
 
-  /* ── Data fetch ──────────────────────────────────────── */
+  /* ── Data fetch ─────────────────────────────────────── */
   async function fetchWithFallback() {
     try {
-      const res = await fetch(PRIMARY_DATA_URL, { cache: "no-store" });
-      if (!res.ok) throw new Error();
-      return { data: await res.json(), isSample: false };
+      const r=await fetch(PRIMARY_DATA_URL,{cache:"no-store"});
+      if (!r.ok) throw new Error();
+      return {data:await r.json(),isSample:false};
     } catch {
       try {
-        const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error();
-        return { data: await res.json(), isSample: true };
+        const r=await fetch(FALLBACK_DATA_URL,{cache:"no-store"});
+        if (!r.ok) throw new Error();
+        return {data:await r.json(),isSample:true};
       } catch {
-        const a = document.getElementById("kpi-alert");
-        a.style.display = "block";
-        a.innerHTML = "<strong>Erreur de chargement.</strong> Impossible de charger les données.";
-        return { data: { dataset:{}, cves:[] }, isSample: true };
+        const a=document.getElementById("kpi-alert");
+        a.style.display="block";
+        a.innerHTML="<strong>Erreur de chargement.</strong> Impossible de charger les données.";
+        return {data:{dataset:{},cves:[]},isSample:true};
       }
     }
   }
 
-  /* ── KPIs ────────────────────────────────────────────── */
-  function renderKpis(cves, meta, isSample) {
-    const total    = cves.length;
-    const critical = cves.filter(c => { const s=parseFloat(c.cvss_base_score); return !isNaN(s)&&s>=8; }).length;
-    const network  = cves.filter(c => { const p=parseCvssVector(c._cvss_vector); return p&&p.av==="N"; }).length;
-    function animateCount(el, target) {
-      const start = performance.now(), dur = 600;
-      const step = now => { const p=Math.min((now-start)/dur,1); el.textContent=Math.round(p*target); if(p<1) requestAnimationFrame(step); else el.textContent=target; };
-      requestAnimationFrame(step);
+  /* ── KPI count-up animation ───────────────────────────── */
+  function animateCount(el, target, duration = 900) {
+    el.classList.remove('animating');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('animating');
+
+    const start = performance.now();
+    // Ease out cubic
+    const ease = t => 1 - Math.pow(1 - t, 3);
+
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      el.textContent = Math.round(ease(progress) * target);
+      if (progress < 1) requestAnimationFrame(step);
+      else {
+        el.textContent = target;
+        el.classList.remove('animating');
+      }
     }
+    requestAnimationFrame(step);
+  }
+
+  /* ── KPIs render ──────────────────────────────────────── */
+  function renderKpis(cves) {
+    const total    = cves.length;
+    const critical = cves.filter(c=>{ const s=parseFloat(c.cvss_base_score); return !isNaN(s)&&s>=8; }).length;
+    const network  = cves.filter(c=>{ const p=parseCvssVector(c._cvss_vector); return p&&p.av==="N"; }).length;
     animateCount(document.getElementById("kpi-total-cves"),    total);
     animateCount(document.getElementById("kpi-critical-cves"), critical);
     animateCount(document.getElementById("kpi-network-cves"),  network);
-    if (total === 0) document.getElementById("kpi-alert").style.display = "block";
+    if (total===0) document.getElementById("kpi-alert").style.display="block";
   }
 
   /* ── Chart ───────────────────────────────────────────── */
@@ -580,139 +564,187 @@
     for (const c of cves) {
       if (!c.published_at) continue;
       const m = c.published_at.slice(0,7);
-      buckets.set(m, (buckets.get(m)||0)+1);
+      buckets.set(m,(buckets.get(m)||0)+1);
     }
-    const series = Array.from(buckets.entries()).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([month,count])=>({month,count}));
+    const series = Array.from(buckets.entries())
+      .sort(([a],[b])=>a<b?-1:a>b?1:0)
+      .map(([month,count])=>({month,count}));
+
     const ctx = document.getElementById("cve-chart");
     if (!ctx||!series.length) return;
     if (chartInstance) { chartInstance.destroy(); chartInstance=null; }
+
+    function barColors() {
+      return series.map(d =>
+        activeMonthFilter === d.month
+          ? "rgba(0,122,204,0.85)"
+          : "rgba(0,122,204,0.25)"
+      );
+    }
+    function barBorders() {
+      return series.map(d =>
+        activeMonthFilter === d.month
+          ? "rgba(0,122,204,1)"
+          : "rgba(0,122,204,0.55)"
+      );
+    }
+
     chartInstance = new Chart(ctx, {
       type: "bar",
       data: {
         labels: series.map(d=>d.month),
-        datasets: [{ label:"CVE / mois", data:series.map(d=>d.count),
-          backgroundColor:"rgba(0,122,204,0.2)", borderColor:"rgba(0,122,204,0.7)",
-          borderWidth:1, borderRadius:4, maxBarThickness:36 }]
+        datasets: [{
+          label: "CVE / mois",
+          data:  series.map(d=>d.count),
+          backgroundColor: barColors(),
+          borderColor:     barBorders(),
+          borderWidth: 1, borderRadius: 4, maxBarThickness: 38
+        }]
       },
       options: {
-        responsive:true, maintainAspectRatio:false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend:{display:false},
-          tooltip:{ backgroundColor:"#2a2d31", borderColor:"rgba(0,122,204,0.3)", borderWidth:1,
-            titleColor:"#ffffff", bodyColor:"#adb5bd",
-            callbacks:{label:ctx=>`${ctx.parsed.y} CVE`} }
+          legend: {display:false},
+          tooltip: {
+            backgroundColor: "#ffffff",
+            borderColor: "rgba(52,58,64,0.15)",
+            borderWidth: 1,
+            titleColor: "#1d1e20",
+            bodyColor: "#495057",
+            padding: 8,
+            callbacks: {
+              title: items => items[0].label,
+              label: item => ` ${item.parsed.y} CVE${activeMonthFilter===series[item.dataIndex]?.month?' (filtré)':' — cliquer pour filtrer'}`
+            }
+          }
         },
         scales: {
-          x:{ grid:{display:false}, ticks:{font:{size:10,family:"'Inter',sans-serif"},color:"#6c757d"}, border:{color:"rgba(255,255,255,0.08)"} },
-          y:{ beginAtZero:true, grid:{color:"rgba(255,255,255,0.05)"}, ticks:{stepSize:1,font:{size:10,family:"'Inter',sans-serif"},color:"#6c757d"}, border:{color:"rgba(255,255,255,0.08)"} }
+          x: { grid:{display:false}, ticks:{font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"}, border:{color:"rgba(52,58,64,0.1)"} },
+          y: { beginAtZero:true, grid:{color:"rgba(52,58,64,0.06)"}, ticks:{stepSize:1,font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"}, border:{color:"rgba(52,58,64,0.1)"} }
+        },
+        onClick(evt, elements) {
+          if (!elements.length) return;
+          const idx   = elements[0].index;
+          const month = series[idx].month;
+          if (activeMonthFilter === month) {
+            activeMonthFilter = null; // toggle off
+          } else {
+            activeMonthFilter = month;
+          }
+          // Update bar colors
+          chartInstance.data.datasets[0].backgroundColor = barColors();
+          chartInstance.data.datasets[0].borderColor     = barBorders();
+          chartInstance.update('none');
+          updateMonthBadge();
+          renderTable(allCves);
         }
       }
     });
   }
 
-  /* ── Pagination helpers ──────────────────────────────── */
-  function totalPages() {
-    if (pageSize === 0) return 1;
-    return Math.max(1, Math.ceil(filteredCves.length / pageSize));
+  /* ── Month filter badge (near table title) ──────────────── */
+  function updateMonthBadge() {
+    const container = document.getElementById("month-filter-badge-container");
+    if (!container) return;
+    if (!activeMonthFilter) {
+      container.innerHTML = "";
+      return;
+    }
+    container.innerHTML =
+      `<span class="month-filter-badge" id="month-badge" title="Cliquer pour effacer">
+        📅 ${activeMonthFilter}
+        <span class="x">✕</span>
+      </span>`;
+    document.getElementById("month-badge").addEventListener("click", () => {
+      activeMonthFilter = null;
+      if (chartInstance) {
+        chartInstance.data.datasets[0].backgroundColor = chartInstance.data.datasets[0].backgroundColor.map(()=>"rgba(0,122,204,0.25)");
+        chartInstance.data.datasets[0].borderColor     = chartInstance.data.datasets[0].borderColor.map(()=>"rgba(0,122,204,0.55)");
+        chartInstance.update('none');
+      }
+      updateMonthBadge();
+      renderTable(allCves);
+    });
   }
 
-  function getPageSlice() {
-    if (pageSize === 0) return filteredCves;
-    const start = (currentPage - 1) * pageSize;
-    return filteredCves.slice(start, start + pageSize);
-  }
+  /* ── Pagination helpers ──────────────────────────────── */
+  const totalPages  = () => pageSize===0 ? 1 : Math.max(1, Math.ceil(filteredCves.length/pageSize));
+  const getPageSlice = () => pageSize===0 ? filteredCves : filteredCves.slice((currentPage-1)*pageSize, currentPage*pageSize);
 
   function renderPaginationBar() {
-    const total = filteredCves.length;
-    const tp    = totalPages();
-    const infoEl = document.getElementById("pagination-info");
-    const navEl  = document.getElementById("page-nav");
+    const total=filteredCves.length, tp=totalPages();
+    const infoEl=document.getElementById("pagination-info");
+    const navEl =document.getElementById("page-nav");
 
-    // Info text
-    if (pageSize === 0) {
-      infoEl.textContent = `${total} entrée(s) affichée(s) sur ${allCves.length} au total`;
+    if (pageSize===0) {
+      infoEl.textContent=`${total} entrée(s) sur ${allCves.length} au total`;
     } else {
-      const start = Math.min((currentPage-1)*pageSize+1, total);
-      const end   = Math.min(currentPage*pageSize, total);
-      infoEl.textContent = total > 0
-        ? `${start}–${end} sur ${total} (total: ${allCves.length})`
-        : `0 résultat (total: ${allCves.length})`;
+      const s=Math.min((currentPage-1)*pageSize+1,total);
+      const e=Math.min(currentPage*pageSize,total);
+      infoEl.textContent=total>0?`${s}–${e} sur ${total} (total : ${allCves.length})`:`0 résultat (total : ${allCves.length})`;
     }
 
-    // Page nav buttons
-    navEl.innerHTML = "";
-    if (tp <= 1) return;
+    navEl.innerHTML="";
+    if (tp<=1) return;
 
-    const mkBtn = (label, page, active=false, disabled=false) => {
-      const b = document.createElement("button");
-      b.className = "page-btn" + (active?" active":"");
-      b.textContent = label;
-      b.disabled = disabled;
-      if (!disabled && !active) b.addEventListener("click", () => { currentPage=page; renderTablePage(); });
+    const mkBtn=(label,page,active=false,disabled=false)=>{
+      const b=document.createElement("button");
+      b.className="page-btn"+(active?" active":"");
+      b.textContent=label; b.disabled=disabled;
+      if (!disabled&&!active) b.addEventListener("click",()=>{currentPage=page;renderTablePage();});
       return b;
     };
 
-    navEl.appendChild(mkBtn("‹", currentPage-1, false, currentPage===1));
-
-    // Smart page range
-    const pages = [];
-    if (tp <= 7) {
-      for (let i=1;i<=tp;i++) pages.push(i);
-    } else {
+    navEl.appendChild(mkBtn("‹",currentPage-1,false,currentPage===1));
+    const pages=[];
+    if (tp<=7){for(let i=1;i<=tp;i++)pages.push(i);}
+    else{
       pages.push(1);
-      if (currentPage > 3) pages.push("…");
-      for (let i=Math.max(2,currentPage-1); i<=Math.min(tp-1,currentPage+1); i++) pages.push(i);
-      if (currentPage < tp-2) pages.push("…");
+      if(currentPage>3)pages.push("…");
+      for(let i=Math.max(2,currentPage-1);i<=Math.min(tp-1,currentPage+1);i++)pages.push(i);
+      if(currentPage<tp-2)pages.push("…");
       pages.push(tp);
     }
-
-    for (const p of pages) {
-      if (p === "…") {
-        const s = document.createElement("span");
-        s.className = "page-ellipsis"; s.textContent = "…";
-        navEl.appendChild(s);
-      } else {
-        navEl.appendChild(mkBtn(p, p, p===currentPage));
-      }
+    for(const p of pages){
+      if(p==="…"){const s=document.createElement("span");s.className="page-ellipsis";s.textContent="…";navEl.appendChild(s);}
+      else navEl.appendChild(mkBtn(p,p,p===currentPage));
     }
-    navEl.appendChild(mkBtn("›", currentPage+1, false, currentPage===tp));
+    navEl.appendChild(mkBtn("›",currentPage+1,false,currentPage===tp));
   }
 
-  /* ── Table render (page slice only) ─────────────────── */
+  /* ── Table page render ────────────────────────────────── */
   function renderTablePage() {
-    const tbody = document.getElementById("cve-table-body");
+    const tbody=document.getElementById("cve-table-body");
     if (!tbody) return;
-    tbody.innerHTML = "";
+    tbody.innerHTML="";
 
-    const slice = getPageSlice();
-    for (const c of slice) {
-      const tr = document.createElement("tr");
-      tr.dataset.cveId = c.cve_id;
-      const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
-      const jsonScore = typeof c.cvss_base_score==="number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
-      const hasScore = !isNaN(jsonScore) && jsonScore !== null;
-      const certfrPart = c.certfr_url
-        ? `<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id||"CERTFR"}</a>` : "";
-
-      tr.innerHTML = `
+    for (const c of getPageSlice()) {
+      const tr=document.createElement("tr");
+      tr.dataset.cveId=c.cve_id;
+      const nvdUrl=`https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
+      const jScore=typeof c.cvss_base_score==="number"?c.cvss_base_score:parseFloat(c.cvss_base_score);
+      const hasScore=!isNaN(jScore)&&c.cvss_base_score!=null;
+      const certfrPart=c.certfr_url
+        ?`<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id||"CERTFR"}</a>`:""
+      tr.innerHTML=`
         <td class="cve-id">${c.cve_id}</td>
         <td class="date-cell">${c.published_at||"–"}</td>
-        <td class="score-cell">${hasScore ? buildNvdBadge(c.cve_id, jsonScore) : `<span class="score-loading">…</span>`}</td>
+        <td class="score-cell">${hasScore?buildNvdBadge(c.cve_id,jScore):`<span class="score-loading">…</span>`}</td>
         <td>${c.impact_type||"–"}</td>
-        <td class="vector-cell-td">${c._cvss_vector ? buildVectorBadges(c._cvss_vector) : `<span class="score-loading">…</span>`}</td>
+        <td class="vector-cell-td">${c._cvss_vector?buildVectorBadges(c._cvss_vector):`<span class="score-loading">…</span>`}</td>
         <td>${buildVersionsBadges(c.windows_10_versions)}</td>
         <td><div class="refs-cell"><a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD ↗</a>${certfrPart}</div></td>
       `;
       tbody.appendChild(tr);
 
-      if (!hasScore || !c._cvss_vector) {
-        const scoreCell  = tr.querySelector(".score-cell");
-        const vectorCell = tr.querySelector(".vector-cell-td");
-        fetchNvdData(c.cve_id).then(({ score, vector }) => {
-          if (score  !== null) c.cvss_base_score = score;
-          if (vector !== null) c._cvss_vector     = vector;
-          if (!hasScore && score !== null && !isNaN(score)) scoreCell.innerHTML = buildNvdBadge(c.cve_id, score);
-          vectorCell.innerHTML = vector ? buildVectorBadges(vector) : `<span class="vec-badge vec-unknown">–</span>`;
+      if (!hasScore||!c._cvss_vector) {
+        const sc=tr.querySelector(".score-cell");
+        const vc=tr.querySelector(".vector-cell-td");
+        fetchNvdData(c.cve_id).then(({score,vector})=>{
+          if (score!=null) c.cvss_base_score=score;
+          if (vector)      c._cvss_vector=vector;
+          if (!hasScore&&score!=null&&!isNaN(score)) sc.innerHTML=buildNvdBadge(c.cve_id,score);
+          vc.innerHTML=vector?buildVectorBadges(vector):`<span class="vec-badge vec-unknown">–</span>`;
           updateNetworkKpi();
         });
       }
@@ -720,58 +752,60 @@
     renderPaginationBar();
   }
 
-  /* ── Full filter+render ──────────────────────────────── */
+  /* ── Full filter + render ─────────────────────────────── */
   function renderTable(cves) {
-    const filterCritical = document.getElementById("filter-critical").checked;
-    const filterNetwork  = document.getElementById("filter-network").checked;
-    const sortCvss       = document.getElementById("sort-cvss").value;
+    const fCrit = document.getElementById("filter-critical").checked;
+    const fNet  = document.getElementById("filter-network").checked;
+    const sort  = document.getElementById("sort-cvss").value;
 
     let result = [...cves];
-    if (filterCritical) result = result.filter(c => { const s=parseFloat(c.cvss_base_score); return !isNaN(s)&&s>=8; });
-    if (filterNetwork)  result = result.filter(c => { const p=parseCvssVector(c._cvss_vector||""); return p&&p.av==="N"; });
-    if (sortCvss !== "none") {
-      result.sort((a,b) => {
-        const av = isNaN(parseFloat(a.cvss_base_score)) ? -Infinity : parseFloat(a.cvss_base_score);
-        const bv = isNaN(parseFloat(b.cvss_base_score)) ? -Infinity : parseFloat(b.cvss_base_score);
-        return sortCvss==="desc" ? bv-av : av-bv;
+
+    // Month filter from chart click
+    if (activeMonthFilter) {
+      result = result.filter(c => c.published_at && c.published_at.startsWith(activeMonthFilter));
+    }
+    if (fCrit) result=result.filter(c=>{const s=parseFloat(c.cvss_base_score);return !isNaN(s)&&s>=8;});
+    if (fNet)  result=result.filter(c=>{const p=parseCvssVector(c._cvss_vector||"");return p&&p.av==="N";});
+    if (sort!=="none") {
+      result.sort((a,b)=>{
+        const av=isNaN(parseFloat(a.cvss_base_score))?-Infinity:parseFloat(a.cvss_base_score);
+        const bv=isNaN(parseFloat(b.cvss_base_score))?-Infinity:parseFloat(b.cvss_base_score);
+        return sort==="desc"?bv-av:av-bv;
       });
     }
-    filteredCves = result;
-    currentPage  = 1;
+    filteredCves=result;
+    currentPage=1;
     renderTablePage();
   }
 
   function updateNetworkKpi() {
-    const count = allCves.filter(c => { const p=parseCvssVector(c._cvss_vector||""); return p&&p.av==="N"; }).length;
-    const el = document.getElementById("kpi-network-cves");
-    if (el) el.textContent = count;
+    const count=allCves.filter(c=>{const p=parseCvssVector(c._cvss_vector||"");return p&&p.av==="N";}).length;
+    const el=document.getElementById("kpi-network-cves");
+    if (el) el.textContent=count;
   }
 
   /* ── Page-size buttons ───────────────────────────────── */
-  document.querySelectorAll('.page-size-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.page-size-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page-size-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.page-size-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      const raw = btn.dataset.size;
-      pageSize    = raw === "all" ? 0 : parseInt(raw, 10);
-      currentPage = 1;
+      pageSize=btn.dataset.size==="all"?0:parseInt(btn.dataset.size,10);
+      currentPage=1;
       renderTablePage();
     });
   });
 
   /* ── Bootstrap ───────────────────────────────────────── */
   async function bootstrap() {
-    const { data, isSample } = await fetchWithFallback();
-    const cves = Array.isArray(data.cves) ? data.cves : [];
-    allCves = cves;
-
-    renderKpis(cves, data.dataset || {}, isSample);
+    const {data,isSample}=await fetchWithFallback();
+    const cves=Array.isArray(data.cves)?data.cves:[];
+    allCves=cves;
+    renderKpis(cves);
     renderChart(cves);
     renderTable(cves);
-
-    document.getElementById("filter-critical").addEventListener("change", () => renderTable(allCves));
-    document.getElementById("filter-network").addEventListener("change",  () => renderTable(allCves));
-    document.getElementById("sort-cvss").addEventListener("change",       () => renderTable(allCves));
+    document.getElementById("filter-critical").addEventListener("change",()=>renderTable(allCves));
+    document.getElementById("filter-network").addEventListener("change", ()=>renderTable(allCves));
+    document.getElementById("sort-cvss").addEventListener("change",      ()=>renderTable(allCves));
   }
 
   bootstrap();
