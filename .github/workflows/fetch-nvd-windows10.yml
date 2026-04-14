@@ -42,10 +42,8 @@ jobs:
             data/windows-10-cve-data.json
 
       - name: Commit and push updated dataset
-        if: github.event_name == 'workflow_dispatch' && env.ALLOW_DATASET_COMMIT == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ALLOW_DATASET_COMMIT: ${{ vars.ALLOW_DATASET_COMMIT }}
         run: |
           if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json)" ]]; then
             git config user.name "github-actions[bot]"
