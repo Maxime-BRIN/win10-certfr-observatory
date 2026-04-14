@@ -10,10 +10,11 @@ Mapping rules (fixed by design):
 - published_at     <- published
 - cvss_base_score  <- cvss_score
 - exploitation_status <- "unknown"
-- impact_type         <- "unknown"
+- impact_type         <- impact_type
 - windows_10_versions <- derived from the CPE variants we query (1607/1709/1909/21H2/22H2)
 - certfr_url       <- ""
 - certfr_id        <- ""
+- reference_url    <- reference_url (or "" if missing)
 
 The script does *not* modify data/cve_windows10.json.
 """
@@ -41,6 +42,7 @@ class FrontendCVE:
   windows_10_versions: List[str]
   certfr_url: str
   certfr_id: str
+  reference_url: str
 
 
 def load_nvd_dataset() -> Dict[str, Any]:
@@ -69,6 +71,9 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
     except (TypeError, ValueError):
       cvss_base = None
 
+    impact_type = item.get("impact_type") or "unknown"
+    reference_url = item.get("reference_url") or ""
+
     # TODO: when per-CPE info is available, derive versions precisely.
     # For now, assign all known Windows 10 versions so the frontend
     # can show something useful.
@@ -80,10 +85,11 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
         published_at=published,
         cvss_base_score=cvss_base,
         exploitation_status="unknown",
-        impact_type="unknown",
+        impact_type=impact_type,
         windows_10_versions=windows_versions,
         certfr_url="",
         certfr_id="",
+        reference_url=reference_url,
       )
     )
 
