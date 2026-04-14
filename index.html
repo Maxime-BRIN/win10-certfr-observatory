@@ -15,15 +15,16 @@
       --bg:            #ffffff;
       --bg-panel:      #ffffff;
       --bg-panel-2:    #ffffff;
-      --bg-hover:      #f5f7fa;
+      --bg-hover:      #e8f1fb;
       --border:        rgba(0,0,0,0.07);
-      --border-strong: rgba(0,0,0,0.12);
+      --border-strong: rgba(0,0,0,0.13);
       --text:          #1d1e20;
       --text-muted:    #495057;
       --text-faint:    #9ca3af;
       --accent:        #007acc;
-      --accent-dim:    rgba(0,122,204,0.08);
+      --accent-dim:    rgba(0,122,204,0.07);
       --accent-hover:  #005fa3;
+      --row-odd:       rgba(0,122,204,0.03);
       --radius:     8px;
       --radius-sm:  5px;
       --radius-pill:999px;
@@ -68,11 +69,15 @@
     .sort-select:hover,.sort-select:focus { border-color:var(--accent); outline:none; }
     .table-wrapper { overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font-size:.78rem; }
-    thead tr { border-bottom:1px solid var(--border-strong); }
-    th { padding:.5rem .6rem; text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); white-space:nowrap; }
-    td { padding:.5rem .6rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    /* ── En-tête ── */
+    thead tr { background:rgba(0,122,204,0.055); border-bottom:2px solid rgba(0,122,204,0.18); }
+    th { padding:.55rem .65rem; text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#4a6a84; white-space:nowrap; }
+    /* ── Lignes ── */
+    td { padding:.5rem .65rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr:nth-child(even) { background:rgba(0,122,204,0.028); }
+    tbody tr:nth-child(odd)  { background:#ffffff; }
     tbody tr { transition:background var(--transition); }
-    tbody tr:hover { background:var(--bg-hover); }
+    tbody tr:hover { background:var(--bg-hover) !important; }
     tbody tr:last-child td { border-bottom:none; }
     .cve-id { font-family:'Courier New',monospace; font-size:.76rem; color:var(--accent); white-space:nowrap; font-weight:600; }
     .date-cell { color:var(--text-muted); white-space:nowrap; }
@@ -103,7 +108,7 @@
     .refs-cell a:hover { color:var(--accent); text-decoration:underline; }
     .refs-sep { color:var(--text-faint); }
     .versions-cell { display:flex; flex-wrap:wrap; gap:.2rem; }
-    .ver-badge { padding:.12rem .38rem; border-radius:3px; font-size:.65rem; font-weight:600; background:#f1f3f5; color:#495057; border:1px solid rgba(0,0,0,.08); white-space:nowrap; }
+    .ver-badge { padding:.12rem .38rem; border-radius:3px; font-size:.65rem; font-weight:600; background:#eef4fb; color:#2c5f8a; border:1px solid rgba(0,122,204,.15); white-space:nowrap; }
     .pagination-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.6rem; margin-top:.9rem; padding-top:.75rem; border-top:1px solid var(--border); }
     .pagination-info { font-size:.75rem; color:var(--text-faint); }
     .pagination-controls { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
@@ -203,7 +208,8 @@
         <div class="pagination-controls">
           <div class="page-size-group">
             <span class="page-size-label">Afficher :</span>
-            <button class="page-size-btn active" data-size="25">25</button>
+            <button class="page-size-btn active" data-size="15">15</button>
+            <button class="page-size-btn" data-size="25">25</button>
             <button class="page-size-btn" data-size="50">50</button>
             <button class="page-size-btn" data-size="100">100</button>
             <button class="page-size-btn" data-size="all">TOUS</button>
@@ -235,36 +241,27 @@
   let chartInstance     = null;
   let activeMonthFilter = null;
   let currentPage       = 1;
-  let pageSize          = 25;
+  let pageSize          = 15;
 
   /* ── Field normalisation ───────────────────────────────
      Accepts BOTH old schema (_cvss_vector, cvss_base_score, published_at)
      AND new schema (cvss_vector_string, cvss_score, published).
-     Always writes to the internal names so the rest of the code never changes.
   ───────────────────────────────────────────────────────── */
   function normalizeCve(c) {
-    // Score : cvss_score (new) || cvss_base_score (old)
     if (c.cvss_base_score == null && c.cvss_score != null)
       c.cvss_base_score = c.cvss_score;
-
-    // Vector : cvss_vector_string (new) || _cvss_vector (old)
     if (!c._cvss_vector && c.cvss_vector_string)
       c._cvss_vector = c.cvss_vector_string;
-
-    // Date : published (new) || published_at (old)
     if (!c.published_at && c.published)
       c.published_at = c.published;
-
-    // Reference URL : reference_url (new) || certfr_url (old)
-    c._ref_url = c.reference_url || c.certfr_url || null;
+    c._ref_url   = c.reference_url || c.certfr_url || null;
     c._ref_label = c.certfr_id || (c._ref_url ? "Réf. " + c.cve_id : null);
-
     return c;
   }
 
   /* ── CVSS helpers ─────────────────────────────────── */
   function cvssInfo(score) {
-    if (score == null || Number.isNaN(score)) return { label:"N/A", cls:"nvd-sev-none" };
+    if (score == null || Number.isNaN(score)) return { label:"N/A",      cls:"nvd-sev-none" };
     if (score === 0)  return { label:"NONE",     cls:"nvd-sev-none" };
     if (score < 4.0)  return { label:"LOW",      cls:"nvd-sev-low" };
     if (score < 7.0)  return { label:"MEDIUM",   cls:"nvd-sev-medium" };
@@ -309,7 +306,7 @@
     return `<div class="versions-cell">${versions.map(v=>`<span class="ver-badge">${v}</span>`).join('')}</div>`;
   }
 
-  /* ── NVD API (fallback quand le JSON local n'a pas le vecteur) ── */
+  /* ── NVD API (fallback) ───────────────────────────────── */
   async function fetchNvdData(cveId) {
     if (nvdCache.has(cveId)) return nvdCache.get(cveId);
     try {
