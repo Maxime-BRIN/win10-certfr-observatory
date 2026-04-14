@@ -51,6 +51,12 @@ NVD_API_KEY_ENV = "NVD_API_KEY"
 MAX_RETRIES_429 = 3
 RETRY_SLEEP_SECONDS = 5
 
+# Sleep entre requêtes d'enrichissement par cveId :
+# - Sans clé API : NVD autorise ~5 req/30s → 6.5s minimum
+# - Avec clé API : NVD autorise ~50 req/30s → 0.6s suffisant
+ENRICH_SLEEP_NO_KEY = 6.5
+ENRICH_SLEEP_WITH_KEY = 0.6
+
 
 # --- Data structures -------------------------------------------------------
 
@@ -82,11 +88,7 @@ def build_nvd_params(
     end: Optional[dt.date] = None,
     start_index: int = 0,
 ) -> Dict[str, Any]:
-    """Build query parameters for NVD CVE 2.0 API.
-
-    Always filters on the provided cpeName (Windows 10 x64 variant).
-    Optionally includes a publication date window when both start and end are provided.
-    """
+    """Build query parameters for NVD CVE 2.0 API."""
     params: Dict[str, Any] = {
         "cpeName": cpe_name,
         "startIndex": start_index,
@@ -94,7 +96,6 @@ def build_nvd_params(
     }
 
     if start is not None and end is not None:
-        # NVD attend des dates ISO étendues (ex: 2025-10-14T00:00:00.000Z)
         params["pubStartDate"] = f"{start.isoformat()}T00:00:00.000Z"
         params["pubEndDate"] = f"{end.isoformat()}T23:59:59.000Z"
 
@@ -159,14 +160,12 @@ def call_nvd_once(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], Optional[str], Optional[str]]:
     """Extract a CVSS base score, severity label, and a coarse impact type.
 
-    Prioritises CVSS v3.1, then v3.0, then v2. Impact type is a simple
-    classification based on the attack type / impact metrics when available.
+    Prioritises CVSS v3.1, then v3.0, then v2.
     """
     score: Optional[float] = None
     severity: Optional[str] = None
     impact_type: Optional[str] = None
 
-    # Try CVSS v3.x first
     for key in ("cvssMetricV31", "cvssMetricV30"):
         arr = metrics.get(key)
         if not arr:
@@ -176,7 +175,6 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
         score = cvss_data.get("baseScore")
         severity = cvss_data.get("baseSeverity") or first.get("baseSeverity")
         vector = (cvss_data.get("vectorString") or "").upper()
-        # Very coarse classification based on typical patterns
         if "AV:N" in vector or "NETWORK" in vector:
             impact_type = "RCE"
         elif "PR:L" in vector or "PR:H" in vector:
@@ -187,7 +185,6 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
             impact_type = "DoS"
         break
 
-    # Fallback to CVSS v2 if nothing found
     if score is None:
         arr_v2 = metrics.get("cvssMetricV2")
         if arr_v2:
@@ -229,13 +226,11 @@ def derive_impact_from_summary(summary: str) -> str:
 
 
 def extract_summary(descriptions: List[Dict[str, Any]]) -> str:
-    # Prefer English description if available.
     if not descriptions:
         return ""
     for d in descriptions:
         if d.get("lang") == "en" and d.get("value"):
             return d["value"].strip()
-    # Fallback: first non-empty value
     for d in descriptions:
         val = d.get("value")
         if val:
@@ -298,20 +293,31 @@ def enrich_cvss(cves: List[SimpleCVE]) -> None:
 
     La requête filtrée par cpeName ne retourne pas toujours le bloc metrics.
     Une requête directe par cveId retourne la fiche complète avec les métriques.
+
+    Rate limit NVD :
+    - Sans clé API : ~5 req/30s → sleep 6.5s
+    - Avec clé API : ~50 req/30s → sleep 0.6s
     """
     to_enrich = [c for c in cves if c.cvss_score is None]
     if not to_enrich:
         print("[INFO] Toutes les CVE ont déjà un score CVSS, pas d'enrichissement nécessaire.")
         return
 
-    print(f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score (requête par cveId)...")
+    api_key = os.getenv(NVD_API_KEY_ENV)
+    sleep_duration = ENRICH_SLEEP_WITH_KEY if api_key else ENRICH_SLEEP_NO_KEY
+    print(
+        f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score "
+        f"(sleep={sleep_duration}s, clé API={'oui' if api_key else 'non'})..."
+    )
 
     enriched_count = 0
     for c in to_enrich:
         params = {"cveId": c.cve_id}
         payload = call_nvd_once(params)
         if not payload:
+            print(f"[WARN] Enrichissement échoué pour {c.cve_id} (NVD non disponible ou 429)", file=sys.stderr)
             continue
+
         vulns = payload.get("vulnerabilities", [])
         if not vulns:
             continue
@@ -326,7 +332,6 @@ def enrich_cvss(cves: List[SimpleCVE]) -> None:
             enriched_count += 1
         if severity is not None:
             c.cvss_severity = severity
-        # Mettre à jour impact_type seulement si on a une meilleure valeur
         if impact_type and (c.impact_type is None or c.impact_type == "unknown"):
             c.impact_type = impact_type
 
@@ -337,24 +342,20 @@ def enrich_cvss(cves: List[SimpleCVE]) -> None:
                 c.summary = summary_enriched
             c.impact_type = derive_impact_from_summary(c.summary)
 
-        # Respecter le rate limit NVD (max ~50 req/30s sans clé API)
-        time.sleep(0.6)
+        time.sleep(sleep_duration)
 
     print(f"[INFO] Enrichissement terminé : {enriched_count}/{len(to_enrich)} CVE ont reçu un score CVSS.")
 
 
 def iter_date_slices(start: dt.date, end: dt.date, slice_days: int) -> List[tuple[dt.date, dt.date]]:
-    """Yield (slice_start, slice_end) pairs covering [start, end] with windows of at most slice_days."""
     slices: List[tuple[dt.date, dt.date]] = []
     current = start
     delta = dt.timedelta(days=slice_days)
-
     while current <= end:
         slice_start = current
         slice_end = min(end, slice_start + delta)
         slices.append((slice_start, slice_end))
         current = slice_end + dt.timedelta(days=1)
-
     return slices
 
 
@@ -365,7 +366,6 @@ def fetch_cves_for_window(
 ) -> List[SimpleCVE]:
     """Fetch CVE for a given CPE and date window, paginating as needed."""
     all_cves: List[SimpleCVE] = []
-
     start_index = 0
     total_results: Optional[int] = None
 
@@ -373,7 +373,6 @@ def fetch_cves_for_window(
         params = build_nvd_params(cpe_name, window_start, window_end, start_index=start_index)
         payload = call_nvd_once(params)
         if payload is None:
-            # On error (including repeated 429), stop for this window.
             break
 
         if total_results is None:
@@ -406,19 +405,12 @@ def fetch_cves_for_window(
 
 
 def fetch_all_cves() -> List[SimpleCVE]:
-    """Fetch CVE for Windows 10 over the global coverage window and multiple CPEs.
-
-    Strategy per CPE:
-    - First, try a simple recent window (last 30 days) to ensure at least one valid call.
-    - Then, slice [COVERAGE_START, COVERAGE_END] into 90-day windows and aggregate.
-    Finally, deduplicate globally by cve_id across all CPEs.
-    """
+    """Fetch CVE for Windows 10 over the global coverage window and multiple CPEs."""
     dedup: Dict[str, SimpleCVE] = {}
 
     for cpe_name in WINDOWS10_CPE_LIST:
         print(f"[INFO] Fetching for CPE {cpe_name}")
 
-        # 1. Simple sanity-check window: last 30 days for this CPE
         recent_end = COVERAGE_END
         recent_start = max(COVERAGE_START, recent_end - dt.timedelta(days=30))
         print(f"[INFO] Fetching sanity window {iso_date(recent_start)} -> {iso_date(recent_end)} for {cpe_name}")
@@ -426,7 +418,6 @@ def fetch_all_cves() -> List[SimpleCVE]:
         for c in sanity_cves:
             dedup[c.cve_id] = c
 
-        # 2. Full coverage sliced into safe windows for this CPE
         print(
             f"[INFO] Fetching full coverage window {iso_date(COVERAGE_START)} -> {iso_date(COVERAGE_END)} "
             f"in slices of {WINDOW_SLICE_DAYS} days for {cpe_name}"
@@ -475,8 +466,8 @@ def main() -> None:
     if not cves:
         print("[WARN] No CVE returned by NVD for the given filters.", file=sys.stderr)
     else:
-        # Passe d'enrichissement CVSS pour les CVE sans score
-        # (la requête filtrée par CPE ne retourne pas toujours le bloc metrics)
+        # Passe d'enrichissement CVSS : requête par cveId pour récupérer les métriques
+        # absentes de la réponse filtrée par CPE
         enrich_cvss(cves)
 
     write_output(cves)
