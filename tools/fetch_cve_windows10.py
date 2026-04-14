@@ -82,6 +82,9 @@ def fetch_page(start_index: int) -> Dict[str, Any]:
     params = build_nvd_params(COVERAGE_START, COVERAGE_END, start_index=start_index)
     headers = get_nvd_headers()
 
+    # DEBUG: log exact request before calling NVD
+    print(f"[DEBUG] NVD URL: {NVD_API_BASE} params={params}")
+
     resp = requests.get(NVD_API_BASE, params=params, headers=headers, timeout=30)
     if resp.status_code != 200:
         print(
