@@ -202,4 +202,446 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
-      align-items: cente
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .filters label {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.3rem 0.5rem;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .filters input[type="checkbox"] {
+      width: 0.8rem;
+      height: 0.8rem;
+    }
+
+    .filters select {
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      padding: 0.25rem 0.6rem;
+      font-size: 0.8rem;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    thead {
+      background: #f9fafb;
+    }
+
+    th,
+    td {
+      padding: 0.5rem 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    tbody tr:hover {
+      background: #f3f4f6;
+    }
+
+    .cve-id {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: #f9fafb;
+    }
+
+    .tag-critical {
+      border-color: rgba(248, 113, 113, 0.7);
+      color: #b91c1c;
+      background: #fef2f2;
+    }
+
+    .tag-exploited {
+      border-color: rgba(22, 163, 74, 0.7);
+      color: #166534;
+      background: #ecfdf3;
+    }
+
+    .footer-meta {
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="header-inner">
+        <div class="title-block">
+          <div>
+            <div class="title">Observatoire Windows 10 – données NVD reconstruites</div>
+            <div class="panel-subtitle" id="dataset-meta"></div>
+          </div>
+          <span class="badge">post-EOS Windows 10</span>
+        </div>
+        <div class="header-links">
+          <a href="methodology.html" target="_blank" rel="noopener noreferrer">Méthodologie</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="top-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Indicateurs clés</div>
+          </div>
+          <div class="kpis">
+            <div class="kpi">
+              <div class="kpi-label">CVE Windows 10 référencées</div>
+              <div class="kpi-value" id="kpi-total-cves">0</div>
+              <div class="kpi-meta">Depuis le 14/10/2025 (NVD)</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">CVE avec CVSS ≥ 8</div>
+              <div class="kpi-value" id="kpi-critical-cves">0</div>
+              <div class="kpi-meta">Gravité élevée et critique (NVD)</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">CVE avec exploitation ou PoC</div>
+              <div class="kpi-value" id="kpi-exploited-cves">0</div>
+              <div class="kpi-meta">Champ reconstruit (statut générique pour l'instant)</div>
+            </div>
+          </div>
+          <div id="kpi-alert" class="alert" style="display:none;">
+            <span>Jeu de données vide.</span>
+            Aucune CVE Windows 10 n'a été trouvée dans le périmètre actuel. Le parsing ou le périmètre de pages peut
+            nécessiter un ajustement.
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Volume de CVE Windows 10 dans le temps</div>
+            <div class="panel-subtitle">Agrégé par mois de publication (NVD)</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="cve-chart"></canvas>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-header">
+          <div class="panel-title">CVE Windows 10 détaillées</div>
+          <div class="filters">
+            <label>
+              <input type="checkbox" id="filter-critical" />
+              <span>CVSS ≥ 8</span>
+            </label>
+            <label>
+              <input type="checkbox" id="filter-exploited" />
+              <span>Exploitées / PoC</span>
+            </label>
+            <label>
+              Score CVSS
+              <select id="sort-cvss">
+                <option value="none">Tri : aucun</option>
+                <option value="desc">Score décroissant</option>
+                <option value="asc">Score croissant</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>CVE</th>
+                <th>Date</th>
+                <th>Score</th>
+                <th>Type d'impact</th>
+                <th>Versions Windows 10</th>
+                <th>Références supplémentaires</th>
+              </tr>
+            </thead>
+            <tbody id="cve-table-body"></tbody>
+          </table>
+        </div>
+        <div class="footer-meta" id="table-footnote"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const PRIMARY_DATA_URL = "./data/windows-10-certfr-data.json";
+    const FALLBACK_DATA_URL = "./data/windows-10-certfr-sample-data.json";
+
+    let allCves = [];
+    let chartInstance = null;
+
+    async function fetchWithFallback() {
+      console.log("init dashboard");
+      try {
+        const res = await fetch(PRIMARY_DATA_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("primary dataset not available");
+        const data = await res.json();
+        return { data, isSample: false };
+      } catch (err) {
+        console.warn("Primary dataset failed, trying fallback", err);
+        try {
+          const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
+          if (!res.ok) throw new Error("fallback dataset not available");
+          const data = await res.json();
+          return { data, isSample: true };
+        } catch (fallbackErr) {
+          console.error("Both datasets failed", fallbackErr);
+          const alert = document.getElementById("kpi-alert");
+          alert.style.display = "block";
+          alert.innerHTML =
+            "<span>Erreur de chargement.</span> Impossible de charger les données du jeu principal ni de l'échantillon.";
+          return { data: { dataset: {}, cves: [] }, isSample: true };
+        }
+      }
+    }
+
+    function computeKpis(cves, datasetMeta, isSample) {
+      const total = cves.length;
+
+      const critical = cves.filter((c) => {
+        const score = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
+        return !Number.isNaN(score) && score >= 8;
+      }).length;
+
+      const exploited = cves.filter((c) => {
+        const status = (c.exploitation_status || "").toLowerCase();
+        return status === "exploited" || status === "poc";
+      }).length;
+
+      const meta = {
+        total,
+        critical,
+        exploited,
+        isSample,
+        coverageStart: datasetMeta?.coverage_start,
+        coverageEnd: datasetMeta?.coverage_end,
+      };
+
+      return meta;
+    }
+
+    function renderKpis(kpis, datasetMeta) {
+      document.getElementById("kpi-total-cves").textContent = kpis.total;
+      document.getElementById("kpi-critical-cves").textContent = kpis.critical;
+      document.getElementById("kpi-exploited-cves").textContent = kpis.exploited;
+
+      const metaEl = document.getElementById("dataset-meta");
+      if (datasetMeta && datasetMeta.coverage_start && datasetMeta.coverage_end) {
+        const label = `Périmètre : ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end} (NVD)`;
+        metaEl.textContent = label + (kpis.isSample ? " · jeu de données d'exemple" : " · données reconstruites");
+      } else {
+        metaEl.textContent = kpis.isSample ? "Jeu de données d'exemple" : "Jeu de données reconstruites (NVD)";
+      }
+
+      if (kpis.total === 0) {
+        const alert = document.getElementById("kpi-alert");
+        alert.style.display = "block";
+      }
+    }
+
+    function groupByMonth(cves) {
+      const buckets = new Map();
+      for (const c of cves) {
+        if (!c.published_at) continue;
+        const month = c.published_at.slice(0, 7); // YYYY-MM
+        const prev = buckets.get(month) || 0;
+        buckets.set(month, prev + 1);
+      }
+      return Array.from(buckets.entries())
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([month, count]) => ({ month, count }));
+    }
+
+    function renderChart(cves) {
+      const series = groupByMonth(cves);
+      const ctx = document.getElementById("cve-chart");
+      if (!ctx) return;
+
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
+
+      if (series.length === 0) {
+        return;
+      }
+
+      const labels = series.map((d) => d.month);
+      const data = series.map((d) => d.count);
+
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "CVE Windows 10 / mois (NVD)",
+              data,
+              backgroundColor: "rgba(37, 99, 235, 0.35)",
+              borderColor: "rgba(37, 99, 235, 1)",
+              borderWidth: 1,
+              borderRadius: 6,
+              maxBarThickness: 32,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.parsed.y} CVE`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10 } },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#e5e7eb" },
+              ticks: { stepSize: 1, font: { size: 10 } },
+            },
+          },
+        },
+      });
+    }
+
+    function renderTable(cves) {
+      const tbody = document.getElementById("cve-table-body");
+      const footnote = document.getElementById("table-footnote");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const filterCritical = document.getElementById("filter-critical").checked;
+      const filterExploited = document.getElementById("filter-exploited").checked;
+      const sortCvss = document.getElementById("sort-cvss").value;
+
+      let filtered = [...cves];
+
+      if (filterCritical) {
+        filtered = filtered.filter((c) => {
+          const score = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
+          return !Number.isNaN(score) && score >= 8;
+        });
+      }
+
+      if (filterExploited) {
+        filtered = filtered.filter((c) => {
+          const status = (c.exploitation_status || "").toLowerCase();
+          return status === "exploited" || status === "poc";
+        });
+      }
+
+      if (sortCvss !== "none") {
+        filtered.sort((a, b) => {
+          const as = typeof a.cvss_base_score === "number" ? a.cvss_base_score : parseFloat(a.cvss_base_score);
+          const bs = typeof b.cvss_base_score === "number" ? b.cvss_base_score : parseFloat(b.cvss_base_score);
+          const aVal = Number.isNaN(as) ? -Infinity : as;
+          const bVal = Number.isNaN(bs) ? -Infinity : bs;
+          return sortCvss === "desc" ? bVal - aVal : aVal - bVal;
+        });
+      }
+
+      for (const c of filtered) {
+        const tr = document.createElement("tr");
+
+        const score = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
+        const isCritical = !Number.isNaN(score) && score >= 8;
+        const status = (c.exploitation_status || "").toLowerCase();
+        const isExploited = status === "exploited" || status === "poc";
+
+        tr.innerHTML = `
+          <td class="cve-id">${c.cve_id}</td>
+          <td>${c.published_at || ""}</td>
+          <td>${Number.isNaN(score) || score == null ? "" : score.toFixed(1)}</td>
+          <td>${c.impact_type || ""}</td>
+          <td>${(c.windows_10_versions || []).join(", ")}</td>
+          <td>
+            ${c.certfr_url
+              ? `<a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "Lien"}</a>`
+              : ""
+            }
+          </td>
+        `;
+
+        if (isCritical || isExploited) {
+          const cell = tr.children[2];
+          const tag = document.createElement("span");
+          tag.className = "tag" + (isCritical ? " tag-critical" : isExploited ? " tag-exploited" : "");
+          tag.textContent = isCritical ? "CVSS ≥ 8" : "Exploité / PoC";
+          cell.appendChild(document.createElement("br"));
+          cell.appendChild(tag);
+        }
+
+        tbody.appendChild(tr);
+      }
+
+      if (footnote) {
+        footnote.textContent = `${filtered.length} entrée(s) sur ${cves.length} au total (après filtres éventuels).`;
+      }
+    }
+
+    async function bootstrap() {
+      const { data, isSample } = await fetchWithFallback();
+      const datasetMeta = data.dataset || {};
+      const cves = Array.isArray(data.cves) ? data.cves : [];
+      allCves = cves;
+
+      const kpis = computeKpis(cves, datasetMeta, isSample);
+      renderKpis(kpis, datasetMeta);
+      renderChart(cves);
+      renderTable(cves);
+
+      document.getElementById("filter-critical").addEventListener("change", () => renderTable(allCves));
+      document.getElementById("filter-exploited").addEventListener("change", () => renderTable(allCves));
+      document.getElementById("sort-cvss").addEventListener("change", () => renderTable(allCves));
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
