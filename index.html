@@ -3,902 +3,977 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Observatoire Windows 10 – données NVD</title>
+  <title>CVE Windows 10 – Observatoire NVD</title>
   <link rel="icon" href="data:," />
+
+  <!-- Polices portfolio mbrin.fr : Lato (titres) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
+    /* ── Tokens ─────────────────────────────────────────── */
     :root {
-      --bg: #f5f5f7;
-      --bg-panel: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --accent: #2563eb;
-      --accent-soft: rgba(37, 99, 235, 0.08);
-      --border-subtle: #e5e7eb;
-      --radius: 10px;
+      /* Palette dark inspirée du portfolio mbrin.fr */
+      --bg:            #141218;
+      --bg-panel:      #1c1a22;
+      --bg-panel-2:    #211e2a;
+      --bg-hover:      #26222f;
+      --border:        rgba(255,255,255,0.07);
+      --border-strong: rgba(255,255,255,0.12);
+
+      --text:          #e8e6ed;
+      --text-muted:    #8a87a0;
+      --text-faint:    #524f63;
+
+      /* Accents portfolio */
+      --accent:        #8b7ef8;   /* violet primaire */
+      --accent-dim:    rgba(139,126,248,0.12);
+      --accent-glow:   rgba(139,126,248,0.22);
+      --success:       #00c4a0;   /* teal success */
+      --danger:        #fc5185;   /* rose danger */
+      --warning:       #ffcd35;   /* jaune warning */
+
+      /* CVSS severity */
+      --sev-none:     #6b7280;
+      --sev-low:      #eab308;
+      --sev-medium:   #f97316;
+      --sev-high:     #ef4444;
+      --sev-critical: #a855f7;
+
+      --radius:  10px;
+      --radius-sm: 6px;
+      --radius-pill: 999px;
+
+      --font-display: 'Lato', system-ui, sans-serif;
+      --font-body:    'Inter', system-ui, sans-serif;
+
+      --transition: 160ms cubic-bezier(0.16,1,0.3,1);
     }
 
-    * {
-      box-sizing: border-box;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      scroll-behavior: smooth;
     }
 
     body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
       background: var(--bg);
       color: var(--text);
+      min-height: 100vh;
     }
 
-    .page {
-      min-height: 100vh;
+    /* ── Layout ─────────────────────────────────────────── */
+    .page { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Page title area (remplace le header sticky) ─────── */
+    .page-hero {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 0;
       display: flex;
       flex-direction: column;
+      gap: 0.35rem;
     }
 
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(8px);
-      background: rgba(245, 245, 247, 0.92);
-      border-bottom: 1px solid var(--border-subtle);
+    .page-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #fff;
     }
 
-    .header-inner {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 0.75rem 1.25rem;
+    .page-hero-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
-    .title-block {
-      display: flex;
+    .chip {
+      display: inline-flex;
       align-items: center;
-      gap: 0.75rem;
-    }
-
-    .title {
-      font-size: 1.1rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: var(--radius-pill);
+      font-size: 0.7rem;
       font-weight: 600;
-    }
-
-    .badge {
-      font-size: 0.75rem;
-      font-weight: 500;
-      padding: 0.18rem 0.5rem;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      border: 1px solid rgba(37, 99, 235, 0.2);
+      letter-spacing: 0.03em;
       white-space: nowrap;
     }
 
-    .header-links a {
-      font-size: 0.85rem;
-      color: var(--muted);
+    .chip-accent {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(139,126,248,0.25);
+    }
+
+    .chip-muted {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .meta-sep { color: var(--text-faint); }
+
+    .meth-link {
+      font-size: 0.78rem;
+      color: var(--accent);
       text-decoration: none;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      border: 1px solid transparent;
+      transition: color var(--transition);
     }
+    .meth-link:hover { color: #b0a6ff; }
 
-    .header-links a:hover {
-      border-color: var(--border-subtle);
-      background: #ffffff;
-    }
-
+    /* ── Main content ────────────────────────────────────── */
     main {
       flex: 1;
-      max-width: 1120px;
+      max-width: 1140px;
       margin: 0 auto;
       padding: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
+      width: 100%;
     }
 
-    .top-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      gap: 1.25rem;
-    }
-
-    @media (max-width: 900px) {
-      .top-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-
+    /* ── Panel base ──────────────────────────────────────── */
     .panel {
       background: var(--bg-panel);
       border-radius: var(--radius);
-      padding: 1rem 1.1rem;
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.18);
+      border: 1px solid var(--border);
+      padding: 1.1rem 1.2rem;
     }
 
     .panel-header {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.85rem;
       gap: 0.5rem;
     }
 
     .panel-title {
+      font-family: var(--font-display);
       font-size: 0.95rem;
-      font-weight: 600;
+      font-weight: 700;
+      color: var(--text);
     }
 
-    .panel-subtitle {
-      font-size: 0.8rem;
-      color: var(--muted);
+    .panel-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
 
+    /* ── Top grid ────────────────────────────────────────── */
+    .top-grid {
+      display: grid;
+      grid-template-columns: minmax(0,2fr) minmax(0,3fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 860px) {
+      .top-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── KPIs ────────────────────────────────────────────── */
     .kpis {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.65rem;
     }
 
-    @media (max-width: 700px) {
-      .kpis {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+    @media (max-width: 640px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
     }
 
     .kpi {
-      padding: 0.75rem 0.8rem;
-      border-radius: 12px;
-      background: #f9fafb;
-      border: 1px solid var(--border-subtle);
+      padding: 0.85rem 0.9rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-panel-2);
+      border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      gap: 0.2rem;
+      gap: 0.25rem;
+      transition: border-color var(--transition);
     }
 
+    .kpi:hover { border-color: var(--border-strong); }
+
     .kpi-label {
-      font-size: 0.8rem;
-      color: var(--muted);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
     }
 
     .kpi-value {
-      font-size: 1.35rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 900;
       color: var(--accent);
+      line-height: 1;
+      letter-spacing: -0.02em;
     }
 
     .kpi-meta {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .chart-container {
-      position: relative;
-      height: 220px;
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      line-height: 1.3;
     }
 
     .alert {
-      margin-top: 0.4rem;
-      padding: 0.45rem 0.6rem;
-      border-radius: 8px;
-      background: #fef9c3;
-      border: 1px solid #facc15;
-      font-size: 0.8rem;
-      color: #854d0e;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255,205,53,0.08);
+      border: 1px solid rgba(255,205,53,0.25);
+      font-size: 0.78rem;
+      color: var(--warning);
     }
 
-    .alert span {
-      font-weight: 600;
+    /* ── Chart ───────────────────────────────────────────── */
+    .chart-container {
+      position: relative;
+      height: 200px;
     }
 
-    .table-panel {
-      margin-bottom: 1rem;
-    }
+    /* ── Table section ───────────────────────────────────── */
+    .table-panel { overflow: hidden; }
 
-    .table-header {
+    .table-toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 0.6rem;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.85rem;
     }
 
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-    }
-
-    .filters label {
-      display: flex;
+      gap: 0.4rem;
       align-items: center;
-      gap: 0.25rem;
-      padding: 0.3rem 0.5rem;
-      border-radius: 999px;
-      background: #f9fafb;
-      border: 1px solid var(--border-subtle);
     }
 
-    .filters input[type="checkbox"] {
-      width: 0.8rem;
-      height: 0.8rem;
+    /* Checkbox filtres sous forme de chips toggle */
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--transition);
     }
 
-    .filters select {
-      border-radius: 999px;
-      border: 1px solid var(--border-subtle);
-      padding: 0.25rem 0.6rem;
-      font-size: 0.8rem;
-      background: #ffffff;
+    .filter-chip:hover { border-color: var(--accent); color: var(--text); }
+
+    .filter-chip input[type="checkbox"] { display: none; }
+
+    .filter-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
     }
+
+    .sort-select {
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-strong);
+      padding: 0.28rem 0.7rem;
+      font-size: 0.75rem;
+      font-family: var(--font-body);
+      background: var(--bg-panel-2);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color var(--transition);
+    }
+
+    .sort-select:hover, .sort-select:focus { border-color: var(--accent); outline: none; }
+
+    /* ── Table ───────────────────────────────────────────── */
+    .table-wrapper { overflow-x: auto; }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
     }
 
-    thead {
-      background: #f9fafb;
-    }
-
-    th,
-    td {
-      padding: 0.5rem 0.5rem;
-      text-align: left;
-      border-bottom: 1px solid #e5e7eb;
+    thead tr {
+      border-bottom: 1px solid var(--border-strong);
     }
 
     th {
-      font-weight: 500;
-      color: var(--muted);
-      font-size: 0.78rem;
+      padding: 0.5rem 0.6rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      white-space: nowrap;
     }
 
-    tbody tr:hover {
-      background: #f3f4f6;
+    td {
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
     }
+
+    tbody tr { transition: background var(--transition); }
+    tbody tr:hover { background: var(--bg-hover); }
+    tbody tr:last-child td { border-bottom: none; }
 
     .cve-id {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.78rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: var(--accent);
+      white-space: nowrap;
     }
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      font-size: 0.7rem;
-      color: var(--muted);
-      background: #f9fafb;
-    }
+    .date-cell { color: var(--text-muted); white-space: nowrap; }
 
-    .tag-critical {
-      border-color: rgba(248, 113, 113, 0.7);
-      color: #b91c1c;
-      background: #fef2f2;
-    }
-
-    .footer-meta {
-      margin-top: 0.4rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    /* NVD score badge */
+    /* ── NVD Badge ───────────────────────────────────────── */
     .nvd-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0;
       text-decoration: none;
-      border-radius: 4px;
+      border-radius: 5px;
       overflow: hidden;
-      font-size: 0.72rem;
-      font-weight: 600;
+      font-size: 0.7rem;
+      font-weight: 700;
       line-height: 1;
       vertical-align: middle;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-      transition: opacity 0.15s ease;
+      transition: opacity var(--transition), transform var(--transition);
+      white-space: nowrap;
     }
 
-    .nvd-badge:hover {
-      opacity: 0.82;
-    }
+    .nvd-badge:hover { opacity: 0.8; transform: translateY(-1px); }
 
     .nvd-badge-score {
-      padding: 0.28rem 0.42rem;
-      background: #374151;
-      color: #ffffff;
+      padding: 0.3rem 0.45rem;
+      background: #2d2a38;
+      color: #e8e6ed;
       letter-spacing: 0.02em;
     }
 
     .nvd-badge-label {
-      padding: 0.28rem 0.48rem;
-      color: #ffffff;
-      letter-spacing: 0.04em;
+      padding: 0.3rem 0.5rem;
+      color: #fff;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
     }
 
-    /* Couleurs par sévérité CVSS v3 */
-    .nvd-sev-none     { background: #6b7280; }
-    .nvd-sev-low      { background: #ca8a04; }
-    .nvd-sev-medium   { background: #ea580c; }
-    .nvd-sev-high     { background: #dc2626; }
-    .nvd-sev-critical { background: #7c3aed; }
+    .nvd-sev-none     { background: #4b5563; }
+    .nvd-sev-low      { background: #a16207; }
+    .nvd-sev-medium   { background: #c2410c; }
+    .nvd-sev-high     { background: #b91c1c; }
+    .nvd-sev-critical { background: #7e22ce; }
 
-    /* Badge de chargement */
-    .score-loading {
-      font-size: 0.72rem;
-      color: var(--muted);
-      font-style: italic;
-    }
+    .score-loading { color: var(--text-faint); font-style: italic; }
 
-    /* Liens dans la colonne Références */
-    .refs-cell {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.35rem;
-    }
+    /* ── Vecteur CVSS badges ─────────────────────────────── */
+    .vector-cell { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
 
-    .refs-cell a {
-      font-size: 0.78rem;
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .refs-cell a:hover {
-      text-decoration: underline;
-    }
-
-    .refs-sep {
-      color: var(--muted);
-      font-size: 0.72rem;
-    }
-
-    /* ── Badges vecteur CVSS ─────────────────────────────── */
-    .vector-cell {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem;
-      align-items: center;
-    }
-
-    /* Puce générique */
     .vec-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.2rem;
-      padding: 0.15rem 0.42rem;
+      padding: 0.14rem 0.38rem;
       border-radius: 4px;
-      font-size: 0.68rem;
+      font-size: 0.66rem;
       font-weight: 600;
       line-height: 1.3;
       white-space: nowrap;
     }
 
-    /* Attack Vector */
-    .vec-av-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Network  – rouge */
-    .vec-av-a  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; } /* Adjacent – orange */
-    .vec-av-l  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* Local    – vert */
-    .vec-av-p  { background: #f5f3ff; color: #5b21b6; border: 1px solid #c4b5fd; } /* Physical – violet */
+    /* Dark-mode variants harmonisés avec la palette */
+    .vec-av-n  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .vec-av-a  { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .vec-av-l  { background: rgba(0,196,160,0.12);  color: #00c4a0; border: 1px solid rgba(0,196,160,0.3); }
+    .vec-av-p  { background: rgba(139,126,248,0.12);color: #a78bfa; border: 1px solid rgba(139,126,248,0.3); }
 
-    /* Privileges Required */
-    .vec-pr-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* None – rouge */
-    .vec-pr-l  { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Low  – jaune */
-    .vec-pr-h  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* High – vert */
+    .vec-pr-n  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .vec-pr-l  { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .vec-pr-h  { background: rgba(0,196,160,0.12);  color: #00c4a0; border: 1px solid rgba(0,196,160,0.3); }
 
-    /* User Interaction */
-    .vec-ui-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* None     – rouge */
-    .vec-ui-r  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* Required – vert */
+    .vec-ui-n  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .vec-ui-r  { background: rgba(0,196,160,0.12);  color: #00c4a0; border: 1px solid rgba(0,196,160,0.3); }
 
-    /* Fallback si vecteur non dispo */
-    .vec-unknown {
-      background: #f3f4f6;
-      color: var(--muted);
-      border: 1px solid var(--border-subtle);
-      font-style: italic;
+    .vec-unknown { background: rgba(255,255,255,0.05); color: var(--text-faint); border: 1px solid var(--border); }
+
+    /* ── Refs cell ───────────────────────────────────────── */
+    .refs-cell {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .refs-cell a {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    .refs-cell a:hover { color: var(--accent); }
+    .refs-sep { color: var(--text-faint); }
+
+    /* ── Versions badge compact ──────────────────────────── */
+    .versions-cell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.2rem;
+    }
+
+    .ver-badge {
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    /* ── Footer meta ─────────────────────────────────────── */
+    .footer-meta {
+      margin-top: 0.75rem;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+      text-align: right;
+    }
+
+    /* ── Footer global (reprend style portfolio) ────────── */
+    .site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: var(--bg-panel);
+      padding: 2rem 1.25rem;
+    }
+
+    .footer-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1rem;
+      color: #fff;
+    }
+
+    .footer-brand span { color: var(--accent); }
+
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .footer-links a {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-copy {
+      font-size: 0.72rem;
+      color: var(--text-faint);
+      align-self: flex-end;
     }
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="page">
-    <header>
-      <div class="header-inner">
-        <div class="title-block">
-          <div>
-            <div class="title">Observatoire Windows 10 – données NVD reconstruites</div>
-            <div class="panel-subtitle" id="dataset-meta"></div>
-          </div>
-          <span class="badge">post-EOS Windows 10</span>
-        </div>
-        <div class="header-links">
-          <a href="methodology.html" target="_blank" rel="noopener noreferrer">Méthodologie</a>
-        </div>
-      </div>
-    </header>
+<div class="page">
 
-    <main>
-      <section class="top-grid">
-        <section class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Indicateurs clés</div>
-          </div>
-          <div class="kpis">
-            <div class="kpi">
-              <div class="kpi-label">CVE Windows 10 référencées</div>
-              <div class="kpi-value" id="kpi-total-cves">0</div>
-              <div class="kpi-meta">Depuis le 14/10/2025 (NVD)</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-label">CVE avec CVSS ≥ 8</div>
-              <div class="kpi-value" id="kpi-critical-cves">0</div>
-              <div class="kpi-meta">Gravité élevée et critique (NVD)</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-label">CVE réseau (AV:N)</div>
-              <div class="kpi-value" id="kpi-network-cves">0</div>
-              <div class="kpi-meta">Exploitables à distance sans accès local</div>
-            </div>
-          </div>
-          <div id="kpi-alert" class="alert" style="display:none;">
-            <span>Jeu de données vide.</span>
-            Aucune CVE Windows 10 n'a été trouvée dans le périmètre actuel. Le parsing ou le périmètre de pages peut
-            nécessiter un ajustement.
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Volume de CVE Windows 10 dans le temps</div>
-            <div class="panel-subtitle">Agrégé par mois de publication (NVD)</div>
-          </div>
-          <div class="chart-container">
-            <canvas id="cve-chart"></canvas>
-          </div>
-        </section>
-      </section>
-
-      <section class="panel table-panel">
-        <div class="table-header">
-          <div class="panel-title">CVE Windows 10 détaillées</div>
-          <div class="filters">
-            <label>
-              <input type="checkbox" id="filter-critical" />
-              <span>CVSS ≥ 8</span>
-            </label>
-            <label>
-              <input type="checkbox" id="filter-network" />
-              <span>Réseau uniquement (AV:N)</span>
-            </label>
-            <label>
-              Score CVSS
-              <select id="sort-cvss">
-                <option value="none">Tri : aucun</option>
-                <option value="desc">Score décroissant</option>
-                <option value="asc">Score croissant</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>CVE</th>
-                <th>Date</th>
-                <th>Score</th>
-                <th>Type d'impact</th>
-                <th title="Attack Vector · Privileges Required · User Interaction (CVSS v3)">Vecteur CVSS</th>
-                <th>Versions Windows 10</th>
-                <th>Références supplémentaires</th>
-              </tr>
-            </thead>
-            <tbody id="cve-table-body"></tbody>
-          </table>
-        </div>
-        <div class="footer-meta" id="table-footnote"></div>
-      </section>
-    </main>
+  <!-- Page title area — pas de header redondant avec le portfolio -->
+  <div class="page-hero">
+    <h1>Observatoire CVE — Windows 10</h1>
+    <div class="page-hero-sub">
+      <span id="dataset-meta">Chargement…</span>
+      <span class="meta-sep">·</span>
+      <span class="chip chip-accent">post-EOS Windows 10</span>
+      <span class="meta-sep">·</span>
+      <a href="methodology.html" class="meth-link" target="_blank" rel="noopener noreferrer">Méthodologie ↗</a>
+    </div>
   </div>
 
-  <script>
-    const PRIMARY_DATA_URL = "./data/windows-10-cve-data.json";
-    const FALLBACK_DATA_URL = "./data/windows-10-cve-sample-data.json";
-    const NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=";
+  <main>
 
-    // Cache local : score + vecteur CVSS
-    const nvdCache = new Map(); // cveId → { score, vector }
+    <!-- KPIs + Chart -->
+    <section class="top-grid">
 
-    let allCves = [];
-    let chartInstance = null;
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Indicateurs clés</span>
+        </div>
+        <div class="kpis">
+          <div class="kpi">
+            <div class="kpi-label">CVE Windows 10 référencées</div>
+            <div class="kpi-value" id="kpi-total-cves">—</div>
+            <div class="kpi-meta">Depuis le 14/10/2025 (NVD)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">CVE avec CVSS ≥ 8</div>
+            <div class="kpi-value" id="kpi-critical-cves">—</div>
+            <div class="kpi-meta">Gravité élevée et critique</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">CVE réseau (AV:N)</div>
+            <div class="kpi-value" id="kpi-network-cves">—</div>
+            <div class="kpi-meta">Exploitables à distance</div>
+          </div>
+        </div>
+        <div id="kpi-alert" class="alert" style="display:none;">
+          <strong>Jeu de données vide.</strong> Aucune CVE Windows 10 trouvée.
+        </div>
+      </div>
 
-    /**
-     * Retourne la sévérité CVSS v3 et la classe CSS associée.
-     */
-    function cvssInfo(score) {
-      if (score === null || score === undefined || Number.isNaN(score)) {
-        return { label: "N/A", cls: "nvd-sev-none" };
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Volume dans le temps</span>
+          <span class="panel-sub">Agrégé par mois de publication (NVD)</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="cve-chart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Table -->
+    <section class="panel table-panel">
+      <div class="table-toolbar">
+        <span class="panel-title">CVE Windows 10 détaillées</span>
+        <div class="filters">
+          <label class="filter-chip" id="chip-critical">
+            <input type="checkbox" id="filter-critical" />
+            CVSS ≥ 8
+          </label>
+          <label class="filter-chip" id="chip-network">
+            <input type="checkbox" id="filter-network" />
+            Réseau (AV:N)
+          </label>
+          <select class="sort-select" id="sort-cvss">
+            <option value="none">Tri : aucun</option>
+            <option value="desc">Score ↓</option>
+            <option value="asc">Score ↑</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>CVE</th>
+              <th>Date</th>
+              <th>Score NVD</th>
+              <th>Type d'impact</th>
+              <th title="Attack Vector · Privileges Required · User Interaction">Vecteur CVSS</th>
+              <th>Versions Win 10</th>
+              <th>Références</th>
+            </tr>
+          </thead>
+          <tbody id="cve-table-body"></tbody>
+        </table>
+      </div>
+      <div class="footer-meta" id="table-footnote"></div>
+    </section>
+
+  </main>
+
+  <!-- Footer reprenant le style du portfolio -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand">Maxime <span>BRIN</span></div>
+        <div style="font-size:0.75rem;color:var(--text-faint);margin-top:0.25rem;">Administrateur Systèmes &amp; Réseaux</div>
+      </div>
+      <div class="footer-links">
+        <a href="https://mbrin.fr" target="_blank" rel="noopener noreferrer">↩ Retour au portfolio</a>
+        <a href="methodology.html" target="_blank" rel="noopener noreferrer">Méthodologie</a>
+        <a href="https://github.com/Maxime-BRIN/win10-cve-observatory" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://nvd.nist.gov/" target="_blank" rel="noopener noreferrer">Source : NVD NIST</a>
+      </div>
+      <div class="footer-copy">© 2025 Maxime BRIN · Données NVD</div>
+    </div>
+  </footer>
+
+</div><!-- .page -->
+
+<script>
+  /* ── Chip toggle visuel ──────────────────────────────── */
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    const cb = chip.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    cb.addEventListener('change', () => {
+      chip.classList.toggle('active', cb.checked);
+    });
+  });
+
+  /* ── Data & Logic ────────────────────────────────────── */
+  const PRIMARY_DATA_URL  = "./data/windows-10-cve-data.json";
+  const FALLBACK_DATA_URL = "./data/windows-10-cve-sample-data.json";
+  const NVD_API_BASE      = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=";
+
+  const nvdCache = new Map();
+  let allCves = [];
+  let chartInstance = null;
+
+  function cvssInfo(score) {
+    if (score === null || score === undefined || Number.isNaN(score)) return { label: "N/A", cls: "nvd-sev-none" };
+    if (score === 0)   return { label: "NONE",     cls: "nvd-sev-none" };
+    if (score < 4.0)   return { label: "LOW",      cls: "nvd-sev-low" };
+    if (score < 7.0)   return { label: "MEDIUM",   cls: "nvd-sev-medium" };
+    if (score < 9.0)   return { label: "HIGH",     cls: "nvd-sev-high" };
+    return               { label: "CRITICAL", cls: "nvd-sev-critical" };
+  }
+
+  function buildNvdBadge(cveId, score) {
+    const nvdUrl = `https://nvd.nist.gov/vuln/detail/${cveId}`;
+    const sev = cvssInfo(score);
+    const scoreDisplay = (score !== null && score !== undefined && !Number.isNaN(score))
+      ? score.toFixed(1) : "N/A";
+    return `<a href="${nvdUrl}" target="_blank" rel="noopener noreferrer"
+        class="nvd-badge"
+        title="Voir ${cveId} sur NVD (Base Score ${scoreDisplay} – ${sev.label})"
+      ><span class="nvd-badge-score">${scoreDisplay}</span
+      ><span class="nvd-badge-label ${sev.cls}">${sev.label}</span
+    ></a>`;
+  }
+
+  function parseCvssVector(v) {
+    if (!v) return null;
+    const map = {};
+    for (const p of v.split("/")) {
+      const [k, val] = p.split(":");
+      if (k && val) map[k.toUpperCase()] = val.toUpperCase();
+    }
+    if (!map["AV"]) return null;
+    return { av: map["AV"], pr: map["PR"] || null, ui: map["UI"] || null };
+  }
+
+  function buildVectorBadges(vectorString) {
+    const parsed = parseCvssVector(vectorString);
+    if (!parsed) return `<span class="vec-badge vec-unknown">–</span>`;
+
+    const avLabels  = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
+    const avClasses = { N: "vec-av-n", A: "vec-av-a", L: "vec-av-l", P: "vec-av-p" };
+    const prLabels  = { N: "PR: None", L: "PR: Low",  H: "PR: High" };
+    const prClasses = { N: "vec-pr-n", L: "vec-pr-l", H: "vec-pr-h" };
+    const uiLabels  = { N: "UI: None", R: "UI: Req." };
+    const uiClasses = { N: "vec-ui-n", R: "vec-ui-r" };
+
+    const avHtml = `<span class="vec-badge ${avClasses[parsed.av] || 'vec-unknown'}"
+      title="Attack Vector: ${avLabels[parsed.av] || parsed.av}">${avLabels[parsed.av] || parsed.av}</span>`;
+    const prHtml = parsed.pr
+      ? `<span class="vec-badge ${prClasses[parsed.pr] || 'vec-unknown'}"
+          title="Privileges Required: ${parsed.pr}">${prLabels[parsed.pr] || 'PR:'+parsed.pr}</span>` : "";
+    const uiHtml = parsed.ui
+      ? `<span class="vec-badge ${uiClasses[parsed.ui] || 'vec-unknown'}"
+          title="User Interaction: ${parsed.ui}">${uiLabels[parsed.ui] || 'UI:'+parsed.ui}</span>` : "";
+
+    return `<div class="vector-cell">${avHtml}${prHtml}${uiHtml}</div>`;
+  }
+
+  function buildVersionsBadges(versions) {
+    if (!versions || !versions.length) return '–';
+    return `<div class="versions-cell">${versions.map(v =>
+      `<span class="ver-badge">${v}</span>`).join('')}</div>`;
+  }
+
+  async function fetchNvdData(cveId) {
+    if (nvdCache.has(cveId)) return nvdCache.get(cveId);
+    try {
+      const res = await fetch(`${NVD_API_BASE}${cveId}`, { headers: { "Accept": "application/json" } });
+      if (!res.ok) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
+      const json = await res.json();
+      const vuln = json?.vulnerabilities?.[0]?.cve;
+      if (!vuln) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
+
+      const metrics = vuln.metrics || {};
+      let score = null, vector = null;
+      if (metrics.cvssMetricV31?.length) {
+        score  = metrics.cvssMetricV31[0].cvssData?.baseScore ?? null;
+        vector = metrics.cvssMetricV31[0].cvssData?.vectorString ?? null;
+      } else if (metrics.cvssMetricV30?.length) {
+        score  = metrics.cvssMetricV30[0].cvssData?.baseScore ?? null;
+        vector = metrics.cvssMetricV30[0].cvssData?.vectorString ?? null;
+      } else if (metrics.cvssMetricV2?.length) {
+        score  = metrics.cvssMetricV2[0].cvssData?.baseScore ?? null;
+        vector = metrics.cvssMetricV2[0].cvssData?.vectorString ?? null;
       }
-      if (score === 0)  return { label: "NONE",     cls: "nvd-sev-none" };
-      if (score < 4.0)  return { label: "LOW",      cls: "nvd-sev-low" };
-      if (score < 7.0)  return { label: "MEDIUM",   cls: "nvd-sev-medium" };
-      if (score < 9.0)  return { label: "HIGH",     cls: "nvd-sev-high" };
-      return              { label: "CRITICAL", cls: "nvd-sev-critical" };
+      nvdCache.set(cveId, { score, vector });
+      return nvdCache.get(cveId);
+    } catch {
+      nvdCache.set(cveId, { score: null, vector: null });
+      return nvdCache.get(cveId);
     }
+  }
 
-    /**
-     * Construit le badge NVD coloré (score + sévérité).
-     */
-    function buildNvdBadge(cveId, score) {
-      const nvdUrl = `https://nvd.nist.gov/vuln/detail/${cveId}`;
-      const sev = cvssInfo(score);
-      const scoreDisplay = (score !== null && score !== undefined && !Number.isNaN(score))
-        ? score.toFixed(1)
-        : "N/A";
-      return `<a href="${nvdUrl}" target="_blank" rel="noopener noreferrer"
-          class="nvd-badge"
-          title="Voir ${cveId} sur NVD (Base Score ${scoreDisplay} – ${sev.label})"
-        ><span class="nvd-badge-score">${scoreDisplay}</span
-        ><span class="nvd-badge-label ${sev.cls}">${sev.label}</span
-      ></a>`;
-    }
-
-    /**
-     * Parse un vecteur CVSS v3 (ex: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
-     * et retourne { av, pr, ui } ou null si non parseable.
-     */
-    function parseCvssVector(vectorString) {
-      if (!vectorString) return null;
-      const map = {};
-      for (const part of vectorString.split("/")) {
-        const [k, v] = part.split(":");
-        if (k && v) map[k.toUpperCase()] = v.toUpperCase();
-      }
-      if (!map["AV"]) return null;
-      return { av: map["AV"], pr: map["PR"] || null, ui: map["UI"] || null };
-    }
-
-    /**
-     * Construit le HTML des badges vecteur CVSS pour la colonne dédiée.
-     * Affiche AV (Attack Vector), PR (Privileges Required), UI (User Interaction).
-     */
-    function buildVectorBadges(vectorString) {
-      const parsed = parseCvssVector(vectorString);
-      if (!parsed) {
-        return `<span class="vec-badge vec-unknown">–</span>`;
-      }
-
-      const avLabels = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
-      const avClasses = { N: "vec-av-n", A: "vec-av-a", L: "vec-av-l", P: "vec-av-p" };
-
-      const prLabels = { N: "PR: None", L: "PR: Low", H: "PR: High" };
-      const prClasses = { N: "vec-pr-n", L: "vec-pr-l", H: "vec-pr-h" };
-
-      const uiLabels = { N: "UI: None", R: "UI: Required" };
-      const uiClasses = { N: "vec-ui-n", R: "vec-ui-r" };
-
-      const avHtml = `<span class="vec-badge ${avClasses[parsed.av] || 'vec-unknown'}"
-        title="Attack Vector: ${avLabels[parsed.av] || parsed.av}">${avLabels[parsed.av] || parsed.av}</span>`;
-
-      const prHtml = parsed.pr
-        ? `<span class="vec-badge ${prClasses[parsed.pr] || 'vec-unknown'}"
-            title="Privileges Required: ${parsed.pr}">${prLabels[parsed.pr] || 'PR:' + parsed.pr}</span>`
-        : "";
-
-      const uiHtml = parsed.ui
-        ? `<span class="vec-badge ${uiClasses[parsed.ui] || 'vec-unknown'}"
-            title="User Interaction: ${parsed.ui}">${uiLabels[parsed.ui] || 'UI:' + parsed.ui}</span>`
-        : "";
-
-      return `<div class="vector-cell">${avHtml}${prHtml}${uiHtml}</div>`;
-    }
-
-    /**
-     * Récupère depuis l'API NVD : score CVSS + vecteur CVSS pour une CVE.
-     * Met en cache le résultat { score, vector }.
-     */
-    async function fetchNvdData(cveId) {
-      if (nvdCache.has(cveId)) return nvdCache.get(cveId);
+  async function fetchWithFallback() {
+    try {
+      const res = await fetch(PRIMARY_DATA_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error("primary not available");
+      return { data: await res.json(), isSample: false };
+    } catch {
       try {
-        const res = await fetch(`${NVD_API_BASE}${cveId}`, {
-          headers: { "Accept": "application/json" }
-        });
-        if (!res.ok) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
-        const json = await res.json();
-        const vuln = json?.vulnerabilities?.[0]?.cve;
-        if (!vuln) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
-
-        const metrics = vuln.metrics || {};
-        let score = null;
-        let vector = null;
-
-        if (metrics.cvssMetricV31?.length) {
-          score  = metrics.cvssMetricV31[0].cvssData?.baseScore ?? null;
-          vector = metrics.cvssMetricV31[0].cvssData?.vectorString ?? null;
-        } else if (metrics.cvssMetricV30?.length) {
-          score  = metrics.cvssMetricV30[0].cvssData?.baseScore ?? null;
-          vector = metrics.cvssMetricV30[0].cvssData?.vectorString ?? null;
-        } else if (metrics.cvssMetricV2?.length) {
-          score  = metrics.cvssMetricV2[0].cvssData?.baseScore ?? null;
-          vector = metrics.cvssMetricV2[0].cvssData?.vectorString ?? null;
-        }
-
-        nvdCache.set(cveId, { score, vector });
-        return nvdCache.get(cveId);
+        const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("fallback not available");
+        return { data: await res.json(), isSample: true };
       } catch {
-        nvdCache.set(cveId, { score: null, vector: null });
-        return nvdCache.get(cveId);
+        const alert = document.getElementById("kpi-alert");
+        alert.style.display = "block";
+        alert.innerHTML = "<strong>Erreur de chargement.</strong> Impossible de charger les données.";
+        return { data: { dataset: {}, cves: [] }, isSample: true };
       }
     }
+  }
 
-    async function fetchWithFallback() {
-      console.log("init dashboard");
-      try {
-        const res = await fetch(PRIMARY_DATA_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error("primary dataset not available");
-        const data = await res.json();
-        return { data, isSample: false };
-      } catch (err) {
-        console.warn("Primary dataset failed, trying fallback", err);
-        try {
-          const res = await fetch(FALLBACK_DATA_URL, { cache: "no-store" });
-          if (!res.ok) throw new Error("fallback dataset not available");
-          const data = await res.json();
-          return { data, isSample: true };
-        } catch (fallbackErr) {
-          console.error("Both datasets failed", fallbackErr);
-          const alert = document.getElementById("kpi-alert");
-          alert.style.display = "block";
-          alert.innerHTML =
-            "<span>Erreur de chargement.</span> Impossible de charger les données du jeu principal ni de l'échantillon.";
-          return { data: { dataset: {}, cves: [] }, isSample: true };
-        }
-      }
+  function renderKpis(cves, datasetMeta, isSample) {
+    const total    = cves.length;
+    const critical = cves.filter(c => {
+      const s = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
+      return !Number.isNaN(s) && s >= 8;
+    }).length;
+    const network = cves.filter(c => {
+      if (!c._cvss_vector) return false;
+      const p = parseCvssVector(c._cvss_vector);
+      return p && p.av === "N";
+    }).length;
+
+    function animateCount(el, target) {
+      const start = performance.now();
+      const duration = 600;
+      const step = (now) => {
+        const p = Math.min((now - start) / duration, 1);
+        el.textContent = Math.round(p * target);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+      };
+      requestAnimationFrame(step);
+    }
+    animateCount(document.getElementById("kpi-total-cves"),    total);
+    animateCount(document.getElementById("kpi-critical-cves"), critical);
+    animateCount(document.getElementById("kpi-network-cves"),  network);
+
+    const metaEl = document.getElementById("dataset-meta");
+    if (datasetMeta?.coverage_start && datasetMeta?.coverage_end) {
+      metaEl.textContent = `Périmètre : ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end} (NVD)`
+        + (isSample ? " · exemple" : " · données reconstruites");
+    } else {
+      metaEl.textContent = isSample ? "Jeu de données d'exemple" : "Données NVD reconstruites";
     }
 
-    function computeKpis(cves, datasetMeta, isSample) {
-      const total = cves.length;
+    if (total === 0) document.getElementById("kpi-alert").style.display = "block";
+  }
 
-      const critical = cves.filter((c) => {
-        const score = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
-        return !Number.isNaN(score) && score >= 8;
-      }).length;
-
-      // CVE réseau : AV:N dans le vecteur mis en cache (après fetch async)
-      // On recalcule après les fetches ; ici on initialise à 0
-      const networkCount = cves.filter((c) => {
-        if (!c._cvss_vector) return false;
-        const p = parseCvssVector(c._cvss_vector);
-        return p && p.av === "N";
-      }).length;
-
-      return { total, critical, networkCount, isSample,
-        coverageStart: datasetMeta?.coverage_start,
-        coverageEnd: datasetMeta?.coverage_end };
+  function renderChart(cves) {
+    const buckets = new Map();
+    for (const c of cves) {
+      if (!c.published_at) continue;
+      const m = c.published_at.slice(0, 7);
+      buckets.set(m, (buckets.get(m) || 0) + 1);
     }
+    const series = Array.from(buckets.entries())
+      .sort(([a],[b]) => a < b ? -1 : a > b ? 1 : 0)
+      .map(([month, count]) => ({ month, count }));
 
-    function renderKpis(kpis, datasetMeta) {
-      document.getElementById("kpi-total-cves").textContent = kpis.total;
-      document.getElementById("kpi-critical-cves").textContent = kpis.critical;
-      document.getElementById("kpi-network-cves").textContent = kpis.networkCount;
+    const ctx = document.getElementById("cve-chart");
+    if (!ctx || !series.length) return;
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
-      const metaEl = document.getElementById("dataset-meta");
-      if (datasetMeta && datasetMeta.coverage_start && datasetMeta.coverage_end) {
-        const label = `Périmètre : ${datasetMeta.coverage_start} → ${datasetMeta.coverage_end} (NVD)`;
-        metaEl.textContent = label + (kpis.isSample ? " · jeu de données d'exemple" : " · données reconstruites");
-      } else {
-        metaEl.textContent = kpis.isSample ? "Jeu de données d'exemple" : "Jeu de données reconstruites (NVD)";
-      }
-
-      if (kpis.total === 0) {
-        document.getElementById("kpi-alert").style.display = "block";
-      }
-    }
-
-    function groupByMonth(cves) {
-      const buckets = new Map();
-      for (const c of cves) {
-        if (!c.published_at) continue;
-        const month = c.published_at.slice(0, 7);
-        buckets.set(month, (buckets.get(month) || 0) + 1);
-      }
-      return Array.from(buckets.entries())
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([month, count]) => ({ month, count }));
-    }
-
-    function renderChart(cves) {
-      const series = groupByMonth(cves);
-      const ctx = document.getElementById("cve-chart");
-      if (!ctx) return;
-      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-      if (series.length === 0) return;
-
-      chartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: series.map((d) => d.month),
-          datasets: [{
-            label: "CVE Windows 10 / mois (NVD)",
-            data: series.map((d) => d.count),
-            backgroundColor: "rgba(37, 99, 235, 0.35)",
-            borderColor: "rgba(37, 99, 235, 1)",
+    chartInstance = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: series.map(d => d.month),
+        datasets: [{
+          label: "CVE / mois",
+          data: series.map(d => d.count),
+          backgroundColor: "rgba(139,126,248,0.25)",
+          borderColor:     "rgba(139,126,248,0.8)",
+          borderWidth: 1,
+          borderRadius: 5,
+          maxBarThickness: 36,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#1c1a22",
+            borderColor: "rgba(139,126,248,0.3)",
             borderWidth: 1,
-            borderRadius: 6,
-            maxBarThickness: 32,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} CVE` } },
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-            y: { beginAtZero: true, grid: { color: "#e5e7eb" }, ticks: { stepSize: 1, font: { size: 10 } } },
+            titleColor: "#e8e6ed",
+            bodyColor: "#8a87a0",
+            callbacks: { label: ctx => `${ctx.parsed.y} CVE` },
           },
         },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 10, family: "'Inter', sans-serif" }, color: "#524f63" },
+            border: { color: "rgba(255,255,255,0.07)" },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: "rgba(255,255,255,0.05)" },
+            ticks: { stepSize: 1, font: { size: 10, family: "'Inter', sans-serif" }, color: "#524f63" },
+            border: { color: "rgba(255,255,255,0.07)" },
+          },
+        },
+      },
+    });
+  }
+
+  function renderTable(cves) {
+    const tbody    = document.getElementById("cve-table-body");
+    const footnote = document.getElementById("table-footnote");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const filterCritical = document.getElementById("filter-critical").checked;
+    const filterNetwork  = document.getElementById("filter-network").checked;
+    const sortCvss       = document.getElementById("sort-cvss").value;
+
+    let filtered = [...cves];
+
+    if (filterCritical) {
+      filtered = filtered.filter(c => {
+        const s = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
+        return !Number.isNaN(s) && s >= 8;
       });
     }
 
-    function renderTable(cves) {
-      const tbody = document.getElementById("cve-table-body");
-      const footnote = document.getElementById("table-footnote");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      const filterCritical = document.getElementById("filter-critical").checked;
-      const filterNetwork  = document.getElementById("filter-network").checked;
-      const sortCvss = document.getElementById("sort-cvss").value;
-
-      let filtered = [...cves];
-
-      if (filterCritical) {
-        filtered = filtered.filter((c) => {
-          const score = typeof c.cvss_base_score === "number" ? c.cvss_base_score : parseFloat(c.cvss_base_score);
-          return !Number.isNaN(score) && score >= 8;
-        });
-      }
-
-      if (filterNetwork) {
-        filtered = filtered.filter((c) => {
-          if (!c._cvss_vector) return false;
-          const p = parseCvssVector(c._cvss_vector);
-          return p && p.av === "N";
-        });
-      }
-
-      if (sortCvss !== "none") {
-        filtered.sort((a, b) => {
-          const as = typeof a.cvss_base_score === "number" ? a.cvss_base_score : parseFloat(a.cvss_base_score);
-          const bs = typeof b.cvss_base_score === "number" ? b.cvss_base_score : parseFloat(b.cvss_base_score);
-          const aVal = Number.isNaN(as) ? -Infinity : as;
-          const bVal = Number.isNaN(bs) ? -Infinity : bs;
-          return sortCvss === "desc" ? bVal - aVal : aVal - bVal;
-        });
-      }
-
-      for (const c of filtered) {
-        const tr = document.createElement("tr");
-        tr.dataset.cveId = c.cve_id;
-
-        const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
-
-        const jsonScore = typeof c.cvss_base_score === "number"
-          ? c.cvss_base_score
-          : (c.cvss_base_score !== null && c.cvss_base_score !== undefined
-            ? parseFloat(c.cvss_base_score)
-            : null);
-        const hasJsonScore = jsonScore !== null && !Number.isNaN(jsonScore);
-
-        const certfrPart = c.certfr_url
-          ? `<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
-          : "";
-
-        // Vecteur CVSS déjà en cache ?
-        const cachedVector = c._cvss_vector || null;
-
-        tr.innerHTML = `
-          <td class="cve-id">${c.cve_id}</td>
-          <td>${c.published_at || ""}</td>
-          <td class="score-cell">
-            ${hasJsonScore
-              ? buildNvdBadge(c.cve_id, jsonScore)
-              : `<span class="score-loading">…</span>`
-            }
-            ${hasJsonScore && jsonScore >= 8
-              ? `<br><span class="tag tag-critical">CVSS ≥ 8</span>`
-              : ""}
-          </td>
-          <td>${c.impact_type || ""}</td>
-          <td class="vector-cell-td">${cachedVector
-            ? buildVectorBadges(cachedVector)
-            : `<span class="score-loading">…</span>`
-          }</td>
-          <td>${(c.windows_10_versions || []).join(", ")}</td>
-          <td>
-            <div class="refs-cell">
-              <a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">${c.cve_id} (NVD)</a>
-              ${certfrPart}
-            </div>
-          </td>
-        `;
-
-        tbody.appendChild(tr);
-
-        // Fetch async si score ou vecteur manquant
-        if (!hasJsonScore || !cachedVector) {
-          const scoreCell  = tr.querySelector(".score-cell");
-          const vectorCell = tr.querySelector(".vector-cell-td");
-
-          fetchNvdData(c.cve_id).then(({ score, vector }) => {
-            // Stocker sur l'objet pour filtres/tris futurs
-            if (score !== null)  c.cvss_base_score = score;
-            if (vector !== null) c._cvss_vector     = vector;
-
-            // Mettre à jour le score si manquant
-            if (!hasJsonScore && score !== null && !Number.isNaN(score)) {
-              let html = buildNvdBadge(c.cve_id, score);
-              if (score >= 8) html += `<br><span class="tag tag-critical">CVSS ≥ 8</span>`;
-              scoreCell.innerHTML = html;
-            }
-
-            // Mettre à jour le vecteur
-            if (vector !== null) {
-              vectorCell.innerHTML = buildVectorBadges(vector);
-            } else {
-              vectorCell.innerHTML = `<span class="vec-badge vec-unknown">–</span>`;
-            }
-
-            // Recalculer le KPI réseau une fois tous les vecteurs récupérés
-            updateNetworkKpi();
-          });
-        }
-      }
-
-      if (footnote) {
-        footnote.textContent = `${filtered.length} entrée(s) sur ${cves.length} au total (après filtres éventuels).`;
-      }
-    }
-
-    /** Recalcule et met à jour le KPI "CVE réseau (AV:N)" */
-    function updateNetworkKpi() {
-      const count = allCves.filter((c) => {
+    if (filterNetwork) {
+      filtered = filtered.filter(c => {
         const p = parseCvssVector(c._cvss_vector || "");
         return p && p.av === "N";
-      }).length;
-      const el = document.getElementById("kpi-network-cves");
-      if (el) el.textContent = count;
+      });
     }
 
-    async function bootstrap() {
-      const { data, isSample } = await fetchWithFallback();
-      const datasetMeta = data.dataset || {};
-      const cves = Array.isArray(data.cves) ? data.cves : [];
-      allCves = cves;
-
-      const kpis = computeKpis(cves, datasetMeta, isSample);
-      renderKpis(kpis, datasetMeta);
-      renderChart(cves);
-      renderTable(cves);
-
-      document.getElementById("filter-critical").addEventListener("change", () => renderTable(allCves));
-      document.getElementById("filter-network").addEventListener("change",  () => renderTable(allCves));
-      document.getElementById("sort-cvss").addEventListener("change",       () => renderTable(allCves));
+    if (sortCvss !== "none") {
+      filtered.sort((a, b) => {
+        const as = typeof a.cvss_base_score === "number" ? a.cvss_base_score : parseFloat(a.cvss_base_score);
+        const bs = typeof b.cvss_base_score === "number" ? b.cvss_base_score : parseFloat(b.cvss_base_score);
+        const aV = Number.isNaN(as) ? -Infinity : as;
+        const bV = Number.isNaN(bs) ? -Infinity : bs;
+        return sortCvss === "desc" ? bV - aV : aV - bV;
+      });
     }
 
-    bootstrap();
-  </script>
+    for (const c of filtered) {
+      const tr = document.createElement("tr");
+      tr.dataset.cveId = c.cve_id;
+
+      const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
+      const jsonScore = typeof c.cvss_base_score === "number"
+        ? c.cvss_base_score
+        : (c.cvss_base_score != null ? parseFloat(c.cvss_base_score) : null);
+      const hasJsonScore = jsonScore !== null && !Number.isNaN(jsonScore);
+
+      const certfrPart = c.certfr_url
+        ? `<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
+        : "";
+
+      tr.innerHTML = `
+        <td class="cve-id">${c.cve_id}</td>
+        <td class="date-cell">${c.published_at || "–"}</td>
+        <td class="score-cell">
+          ${hasJsonScore ? buildNvdBadge(c.cve_id, jsonScore) : `<span class="score-loading">…</span>`}
+        </td>
+        <td>${c.impact_type || "–"}</td>
+        <td class="vector-cell-td">${c._cvss_vector
+          ? buildVectorBadges(c._cvss_vector)
+          : `<span class="score-loading">…</span>`
+        }</td>
+        <td>${buildVersionsBadges(c.windows_10_versions)}</td>
+        <td>
+          <div class="refs-cell">
+            <a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD ↗</a>
+            ${certfrPart}
+          </div>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+
+      if (!hasJsonScore || !c._cvss_vector) {
+        const scoreCell  = tr.querySelector(".score-cell");
+        const vectorCell = tr.querySelector(".vector-cell-td");
+
+        fetchNvdData(c.cve_id).then(({ score, vector }) => {
+          if (score  !== null) c.cvss_base_score = score;
+          if (vector !== null) c._cvss_vector     = vector;
+
+          if (!hasJsonScore && score !== null && !Number.isNaN(score))
+            scoreCell.innerHTML = buildNvdBadge(c.cve_id, score);
+
+          vectorCell.innerHTML = vector
+            ? buildVectorBadges(vector)
+            : `<span class="vec-badge vec-unknown">–</span>`;
+
+          updateNetworkKpi();
+        });
+      }
+    }
+
+    if (footnote)
+      footnote.textContent = `${filtered.length} entrée(s) affichée(s) sur ${cves.length} au total.`;
+  }
+
+  function updateNetworkKpi() {
+    const count = allCves.filter(c => {
+      const p = parseCvssVector(c._cvss_vector || "");
+      return p && p.av === "N";
+    }).length;
+    const el = document.getElementById("kpi-network-cves");
+    if (el) el.textContent = count;
+  }
+
+  async function bootstrap() {
+    const { data, isSample } = await fetchWithFallback();
+    const datasetMeta = data.dataset || {};
+    const cves = Array.isArray(data.cves) ? data.cves : [];
+    allCves = cves;
+
+    renderKpis(cves, datasetMeta, isSample);
+    renderChart(cves);
+    renderTable(cves);
+
+    document.getElementById("filter-critical").addEventListener("change", () => renderTable(allCves));
+    document.getElementById("filter-network").addEventListener("change",  () => renderTable(allCves));
+    document.getElementById("sort-cvss").addEventListener("change",       () => renderTable(allCves));
+  }
+
+  bootstrap();
+</script>
 </body>
 </html>
