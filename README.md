@@ -3,6 +3,7 @@
 > Tableau de bord statique HTML de surveillance des CVE affectant Windows 10, alimenté automatiquement par l'API NVD (NIST) via GitHub Actions.
 
 [![Mise à jour automatique](https://github.com/Maxime-BRIN/win10-cve-observatory/actions/workflows/fetch-nvd-windows10.yml/badge.svg)](https://github.com/Maxime-BRIN/win10-cve-observatory/actions/workflows/fetch-nvd-windows10.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Maxime-BRIN/win10-cve-observatory/blob/main/LICENSE)
 
 ---
 
@@ -35,6 +36,7 @@ win10-cve-observatory/
 │
 ├── index.html                            # Interface principale (SPA statique)
 ├── README.md
+├── LICENSE                               # Licence MIT
 │
 ├── data/
 │   ├── windows-10-cve-data.json          # ✅ Dataset principal (utilisé par le frontend)
@@ -162,4 +164,8 @@ python -m http.server 8080
 
 ## 📝 Licence
 
-Projet personnel à des fins de veille et démonstration. Données issues du [NVD (NIST)](https://nvd.nist.gov/) – domaine public.
+Ce projet est distribué sous licence **MIT** — voir le fichier [LICENSE](./LICENSE) pour le texte complet.
+
+Copyright &copy; 2026 **Maxime BRIN**
+
+Les données CVE sont issues du [NVD (NIST)](https://nvd.nist.gov/) et sont dans le domaine public.
