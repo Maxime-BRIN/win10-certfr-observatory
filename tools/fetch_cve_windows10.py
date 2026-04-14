@@ -60,6 +60,8 @@ class SimpleCVE:
     published: str
     cvss_score: Optional[float]
     cvss_severity: Optional[str]
+    impact_type: Optional[str]
+    reference_url: str
     summary: str
 
 
@@ -154,8 +156,17 @@ def call_nvd_once(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
 
-def extract_cvss_v3(metrics: Dict[str, Any]) -> (Optional[float], Optional[str]):
-    # NVD 2.0 may provide several metric collections; try v3.1, then v3.0.
+def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], Optional[str], Optional[str]]:
+    """Extract a CVSS base score, severity label, and a coarse impact type.
+
+    Prioritises CVSS v3.1, then v3.0, then v2. Impact type is a simple
+    classification based on the attack type / impact metrics when available.
+    """
+    score: Optional[float] = None
+    severity: Optional[str] = None
+    impact_type: Optional[str] = None
+
+    # Try CVSS v3.x first
     for key in ("cvssMetricV31", "cvssMetricV30"):
         arr = metrics.get(key)
         if not arr:
@@ -164,8 +175,37 @@ def extract_cvss_v3(metrics: Dict[str, Any]) -> (Optional[float], Optional[str])
         cvss_data = first.get("cvssData", {})
         score = cvss_data.get("baseScore")
         severity = cvss_data.get("baseSeverity")
-        return score, severity
-    return None, None
+        vector = (cvss_data.get("vectorString") or "").upper()
+        # Very coarse classification based on typical patterns
+        if "AV:N" in vector or "NETWORK" in vector:
+            impact_type = "RCE"
+        elif "PR:L" in vector or "PR:H" in vector:
+            impact_type = "EoP"
+        elif "C:H" in vector and "A:N" in vector:
+            impact_type = "InfoLeak"
+        elif "A:H" in vector:
+            impact_type = "DoS"
+        break
+
+    # Fallback to CVSS v2 if nothing found
+    if score is None:
+        arr_v2 = metrics.get("cvssMetricV2")
+        if arr_v2:
+            first_v2 = arr_v2[0]
+            cvss_data_v2 = first_v2.get("cvssData", {})
+            score = cvss_data_v2.get("baseScore")
+            severity = first_v2.get("baseSeverity") or severity
+            vector_v2 = (cvss_data_v2.get("vectorString") or "").upper()
+            if "AV:N" in vector_v2:
+                impact_type = impact_type or "RCE"
+            elif "PR:L" in vector_v2 or "PR:H" in vector_v2:
+                impact_type = impact_type or "EoP"
+            elif "C:C" in vector_v2 and "A:N" in vector_v2:
+                impact_type = impact_type or "InfoLeak"
+            elif "A:C" in vector_v2:
+                impact_type = impact_type or "DoS"
+
+    return score, severity, impact_type
 
 
 def extract_summary(descriptions: List[Dict[str, Any]]) -> str:
@@ -183,6 +223,15 @@ def extract_summary(descriptions: List[Dict[str, Any]]) -> str:
     return ""
 
 
+def extract_reference_url(cve_id: str, refs: List[Dict[str, Any]]) -> str:
+    """Pick a reference URL if available, otherwise default to the NVD detail page."""
+    for ref in refs or []:
+        url = ref.get("url")
+        if url:
+            return str(url)
+    return f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+
+
 def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
     cves: List[SimpleCVE] = []
     vulns = payload.get("vulnerabilities", [])
@@ -196,10 +245,13 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
         published = cve.get("published", "")
 
         metrics = v.get("metrics", {})
-        score, severity = extract_cvss_v3(metrics)
+        score, severity, impact_type = extract_cvss_and_impact(metrics)
 
         descriptions = cve.get("descriptions", [])
         summary = extract_summary(descriptions)
+
+        references = cve.get("references", [])
+        ref_url = extract_reference_url(cve_id, references)
 
         cves.append(
             SimpleCVE(
@@ -207,6 +259,8 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
                 published=published[:10] if published else "",
                 cvss_score=score,
                 cvss_severity=severity,
+                impact_type=impact_type,
+                reference_url=ref_url,
                 summary=summary,
             )
         )
