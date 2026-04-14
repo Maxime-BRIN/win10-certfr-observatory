@@ -12,244 +12,82 @@
 
   <style>
     :root {
-      /* ─ Palette claire ─ */
       --bg:            #f4f6f8;
       --bg-panel:      #ffffff;
       --bg-panel-2:    #f8f9fa;
       --bg-hover:      #eef2f6;
       --border:        rgba(52,58,64,0.10);
       --border-strong: rgba(52,58,64,0.18);
-
       --text:          #1d1e20;
       --text-muted:    #495057;
       --text-faint:    #868e96;
-
       --accent:        #007acc;
       --accent-dim:    rgba(0,122,204,0.10);
       --accent-hover:  #005fa3;
-
-      /* CVSS severity */
-      --sev-none:     #6b7280;
-      --sev-low:      #a16207;
-      --sev-medium:   #c2410c;
-      --sev-high:     #b91c1c;
-      --sev-critical: #7e22ce;
-
       --radius:     8px;
       --radius-sm:  5px;
       --radius-pill:999px;
-
       --font-display: 'Lato', system-ui, sans-serif;
       --font-body:    'Inter', system-ui, sans-serif;
       --transition:   160ms cubic-bezier(0.16,1,0.3,1);
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
-    body {
-      font-family: var(--font-body);
-      font-size: 0.875rem;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
+    body { font-family: var(--font-body); font-size: 0.875rem; background: var(--bg); color: var(--text); min-height: 100vh; }
     .page { display: flex; flex-direction: column; min-height: 100vh; }
-
-    main {
-      flex: 1;
-      max-width: 1140px;
-      margin: 0 auto;
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      width: 100%;
-    }
-
-    /* ─ Panel ─ */
-    .panel {
-      background: var(--bg-panel);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 1.1rem 1.2rem;
-      box-shadow: 0 1px 3px rgba(29,30,32,0.06);
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.85rem;
-      gap: 0.5rem;
-    }
-
-    .panel-title {
-      font-family: var(--font-display);
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .panel-sub { font-size: 0.75rem; color: var(--text-faint); }
-
-    /* ─ Top grid ─ */
-    .top-grid {
-      display: grid;
-      grid-template-columns: minmax(0,2fr) minmax(0,3fr);
-      gap: 1.25rem;
-    }
-    @media (max-width: 860px) { .top-grid { grid-template-columns: 1fr; } }
-
-    /* ─ KPIs ─ */
-    .kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.65rem; }
-    @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2,1fr); } }
-
-    .kpi {
-      padding: 0.9rem 1rem;
-      border-radius: var(--radius-sm);
-      background: var(--bg-panel-2);
-      border: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 0.3rem;
-      transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .kpi:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,122,204,0.08); }
-
-    .kpi-label { font-size: 0.72rem; color: var(--text-muted); line-height: 1.3; font-weight: 500; }
-    .kpi-value {
-      font-family: var(--font-display);
-      font-size: 2rem; font-weight: 900;
-      color: var(--accent); line-height: 1; letter-spacing: -0.03em;
-      /* count-up animation support */
-      display: inline-block;
-    }
-    .kpi-meta { font-size: 0.68rem; color: var(--text-faint); line-height: 1.3; }
-
-    /* KPI count-up flash */
-    @keyframes kpi-pop {
-      0%   { transform: scale(0.85); opacity: 0.3; }
-      60%  { transform: scale(1.06); }
-      100% { transform: scale(1);    opacity: 1; }
-    }
-    .kpi-value.animating { animation: kpi-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-    .alert {
-      margin-top: 0.5rem; padding: 0.5rem 0.7rem;
-      border-radius: var(--radius-sm);
-      background: rgba(255,193,7,0.08);
-      border: 1px solid rgba(255,193,7,0.3);
-      font-size: 0.78rem; color: #92620a;
-    }
-
-    /* ─ Chart ─ */
-    .chart-container { position: relative; height: 200px; cursor: pointer; }
-
-    /* Active month filter pill */
-    .month-filter-badge {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.2rem 0.55rem;
-      border-radius: var(--radius-pill);
-      background: var(--accent-dim);
-      border: 1px solid rgba(0,122,204,0.3);
-      color: var(--accent);
-      font-size: 0.72rem; font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition);
-    }
-    .month-filter-badge:hover { background: rgba(0,122,204,0.18); }
-    .month-filter-badge .x { opacity: 0.7; font-size: 0.8em; margin-left: 0.1rem; }
-
-    /* ─ Table section ─ */
-    .table-panel { overflow: hidden; }
-
-    .table-toolbar {
-      display: flex; flex-wrap: wrap; gap: 0.6rem;
-      align-items: center; justify-content: space-between;
-      margin-bottom: 0.85rem;
-    }
-
-    .toolbar-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-    .filters { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-
-    .filter-chip {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      padding: 0.28rem 0.65rem;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-strong);
-      background: transparent; color: var(--text-muted);
-      font-size: 0.75rem; font-family: var(--font-body);
-      cursor: pointer; user-select: none;
-      transition: all var(--transition);
-    }
-    .filter-chip:hover { border-color: var(--accent); color: var(--text); }
-    .filter-chip input[type="checkbox"] { display: none; }
-    .filter-chip.active {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      color: var(--accent); font-weight: 600;
-    }
-
-    .sort-select {
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-strong);
-      padding: 0.28rem 0.7rem;
-      font-size: 0.75rem; font-family: var(--font-body);
-      background: var(--bg-panel-2); color: var(--text);
-      cursor: pointer; transition: border-color var(--transition);
-    }
-    .sort-select:hover, .sort-select:focus { border-color: var(--accent); outline: none; }
-
-    /* ─ Table ─ */
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    thead tr { border-bottom: 2px solid var(--border-strong); }
-    th {
-      padding: 0.5rem 0.6rem; text-align: left;
-      font-size: 0.68rem; font-weight: 700;
-      letter-spacing: 0.05em; text-transform: uppercase;
-      color: var(--text-faint); white-space: nowrap;
-    }
-    td {
-      padding: 0.5rem 0.6rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-    tbody tr { transition: background var(--transition); }
-    tbody tr:hover { background: var(--bg-hover); }
-    tbody tr:last-child td { border-bottom: none; }
-
-    .cve-id {
-      font-family: 'Courier New', monospace;
-      font-size: 0.76rem; color: var(--accent); white-space: nowrap;
-      font-weight: 600;
-    }
-    .date-cell { color: var(--text-muted); white-space: nowrap; }
-
-    /* ─ NVD Badge ─ */
-    .nvd-badge {
-      display: inline-flex; align-items: center;
-      text-decoration: none; border-radius: 4px; overflow: hidden;
-      font-size: 0.7rem; font-weight: 700; line-height: 1;
-      vertical-align: middle;
-      transition: opacity var(--transition), transform var(--transition);
-      white-space: nowrap;
-    }
-    .nvd-badge:hover { opacity: 0.85; transform: translateY(-1px); }
-    .nvd-badge-score { padding: 0.28rem 0.42rem; background: #343a40; color: #fff; }
-    .nvd-badge-label { padding: 0.28rem 0.48rem; color: #fff; letter-spacing: 0.05em; text-transform: uppercase; }
-    .nvd-sev-none     { background: #6b7280; }
-    .nvd-sev-low      { background: #a16207; }
-    .nvd-sev-medium   { background: #c2410c; }
-    .nvd-sev-high     { background: #b91c1c; }
-    .nvd-sev-critical { background: #7e22ce; }
-    .score-loading { color: var(--text-faint); font-style: italic; }
-
-    /* ─ Vector badges ─ */
-    .vector-cell { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
-    .vec-badge {
-      display: inline-flex; align-items: center;
-      padding: 0.14rem 0.38rem; border-radius: 3px;
-      font-size: 0.66rem; font-weight: 600; line-height: 1.3; white-space: nowrap;
-    }
+    main { flex:1; max-width:1140px; margin:0 auto; padding:1.25rem; display:flex; flex-direction:column; gap:1.25rem; width:100%; }
+    .panel { background:var(--bg-panel); border-radius:var(--radius); border:1px solid var(--border); padding:1.1rem 1.2rem; box-shadow:0 1px 3px rgba(29,30,32,0.06); }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.85rem; gap:.5rem; }
+    .panel-title { font-family:var(--font-display); font-size:.95rem; font-weight:700; color:var(--text); }
+    .panel-sub { font-size:.75rem; color:var(--text-faint); }
+    .top-grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,3fr); gap:1.25rem; }
+    @media (max-width:860px) { .top-grid { grid-template-columns:1fr; } }
+    .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:.65rem; }
+    @media (max-width:640px) { .kpis { grid-template-columns:repeat(2,1fr); } }
+    .kpi { padding:.9rem 1rem; border-radius:var(--radius-sm); background:var(--bg-panel-2); border:1px solid var(--border); display:flex; flex-direction:column; gap:.3rem; transition:border-color var(--transition),box-shadow var(--transition); }
+    .kpi:hover { border-color:var(--accent); box-shadow:0 2px 8px rgba(0,122,204,.08); }
+    .kpi-label { font-size:.72rem; color:var(--text-muted); line-height:1.3; font-weight:500; }
+    .kpi-value { font-family:var(--font-display); font-size:2rem; font-weight:900; color:var(--accent); line-height:1; letter-spacing:-.03em; display:inline-block; }
+    .kpi-meta { font-size:.68rem; color:var(--text-faint); line-height:1.3; }
+    @keyframes kpi-pop { 0%{transform:scale(.85);opacity:.3} 60%{transform:scale(1.06)} 100%{transform:scale(1);opacity:1} }
+    .kpi-value.animating { animation:kpi-pop .55s cubic-bezier(.34,1.56,.64,1) both; }
+    .alert { margin-top:.5rem; padding:.5rem .7rem; border-radius:var(--radius-sm); background:rgba(255,193,7,.08); border:1px solid rgba(255,193,7,.3); font-size:.78rem; color:#92620a; }
+    .chart-container { position:relative; height:200px; cursor:pointer; }
+    .month-filter-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; border-radius:var(--radius-pill); background:var(--accent-dim); border:1px solid rgba(0,122,204,.3); color:var(--accent); font-size:.72rem; font-weight:600; cursor:pointer; transition:all var(--transition); }
+    .month-filter-badge:hover { background:rgba(0,122,204,.18); }
+    .month-filter-badge .x { opacity:.7; font-size:.8em; margin-left:.1rem; }
+    .table-panel { overflow:hidden; }
+    .table-toolbar { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; justify-content:space-between; margin-bottom:.85rem; }
+    .toolbar-left { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+    .filters { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+    .filter-chip { display:inline-flex; align-items:center; gap:.3rem; padding:.28rem .65rem; border-radius:var(--radius-pill); border:1px solid var(--border-strong); background:transparent; color:var(--text-muted); font-size:.75rem; font-family:var(--font-body); cursor:pointer; user-select:none; transition:all var(--transition); }
+    .filter-chip:hover { border-color:var(--accent); color:var(--text); }
+    .filter-chip input[type="checkbox"] { display:none; }
+    .filter-chip.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); font-weight:600; }
+    .sort-select { border-radius:var(--radius-pill); border:1px solid var(--border-strong); padding:.28rem .7rem; font-size:.75rem; font-family:var(--font-body); background:var(--bg-panel-2); color:var(--text); cursor:pointer; transition:border-color var(--transition); }
+    .sort-select:hover,.sort-select:focus { border-color:var(--accent); outline:none; }
+    .table-wrapper { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.78rem; }
+    thead tr { border-bottom:2px solid var(--border-strong); }
+    th { padding:.5rem .6rem; text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); white-space:nowrap; }
+    td { padding:.5rem .6rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr { transition:background var(--transition); }
+    tbody tr:hover { background:var(--bg-hover); }
+    tbody tr:last-child td { border-bottom:none; }
+    .cve-id { font-family:'Courier New',monospace; font-size:.76rem; color:var(--accent); white-space:nowrap; font-weight:600; }
+    .date-cell { color:var(--text-muted); white-space:nowrap; }
+    .nvd-badge { display:inline-flex; align-items:center; text-decoration:none; border-radius:4px; overflow:hidden; font-size:.7rem; font-weight:700; line-height:1; vertical-align:middle; transition:opacity var(--transition),transform var(--transition); white-space:nowrap; }
+    .nvd-badge:hover { opacity:.85; transform:translateY(-1px); }
+    .nvd-badge-score { padding:.28rem .42rem; background:#343a40; color:#fff; }
+    .nvd-badge-label { padding:.28rem .48rem; color:#fff; letter-spacing:.05em; text-transform:uppercase; }
+    .nvd-sev-none     { background:#6b7280; }
+    .nvd-sev-low      { background:#a16207; }
+    .nvd-sev-medium   { background:#c2410c; }
+    .nvd-sev-high     { background:#b91c1c; }
+    .nvd-sev-critical { background:#7e22ce; }
+    .score-loading { color:var(--text-faint); font-style:italic; }
+    .vector-cell { display:flex; flex-wrap:wrap; gap:.25rem; align-items:center; }
+    .vec-badge { display:inline-flex; align-items:center; padding:.14rem .38rem; border-radius:3px; font-size:.66rem; font-weight:600; line-height:1.3; white-space:nowrap; }
     .vec-av-n  { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
     .vec-av-a  { background:#fef9c3; color:#92620a; border:1px solid #fde047; }
     .vec-av-l  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
@@ -260,61 +98,26 @@
     .vec-ui-n  { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
     .vec-ui-r  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
     .vec-unknown { background:#f3f4f6; color:var(--text-faint); border:1px solid var(--border); }
-
-    /* ─ Refs ─ */
-    .refs-cell { display:flex; flex-wrap:wrap; align-items:center; gap:0.3rem; }
+    .refs-cell { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; }
     .refs-cell a { font-size:.75rem; color:var(--text-muted); text-decoration:none; transition:color var(--transition); }
     .refs-cell a:hover { color:var(--accent); text-decoration:underline; }
     .refs-sep { color:var(--text-faint); }
-
-    /* ─ Versions ─ */
-    .versions-cell { display:flex; flex-wrap:wrap; gap:0.2rem; }
-    .ver-badge {
-      padding:.12rem .38rem; border-radius:3px;
-      font-size:.65rem; font-weight:600;
-      background:#e9ecef; color:#495057;
-      border:1px solid #dee2e6; white-space:nowrap;
-    }
-
-    /* ─ Pagination ─ */
-    .pagination-bar {
-      display: flex; align-items: center;
-      justify-content: space-between; flex-wrap: wrap;
-      gap: 0.6rem; margin-top: 0.9rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border);
-    }
-    .pagination-info { font-size: 0.75rem; color: var(--text-faint); }
-    .pagination-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-    .page-size-group { display: flex; align-items: center; gap: 0.25rem; }
-    .page-size-label { font-size: 0.72rem; color: var(--text-faint); }
-    .page-size-btn {
-      padding: 0.24rem 0.6rem;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-strong);
-      background: transparent; color: var(--text-muted);
-      font-size: 0.72rem; font-family: var(--font-body);
-      cursor: pointer; transition: all var(--transition);
-    }
-    .page-size-btn:hover { border-color: var(--accent); color: var(--text); }
-    .page-size-btn.active {
-      background: var(--accent); border-color: var(--accent);
-      color: #fff; font-weight: 700;
-    }
-    .page-nav { display: flex; align-items: center; gap: 0.3rem; }
-    .page-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 1.8rem; height: 1.8rem; padding: 0 0.35rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-strong);
-      background: transparent; color: var(--text-muted);
-      font-size: 0.75rem; font-family: var(--font-body);
-      cursor: pointer; transition: all var(--transition);
-    }
-    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    .page-ellipsis { color: var(--text-faint); font-size: 0.75rem; padding: 0 0.2rem; }
+    .versions-cell { display:flex; flex-wrap:wrap; gap:.2rem; }
+    .ver-badge { padding:.12rem .38rem; border-radius:3px; font-size:.65rem; font-weight:600; background:#e9ecef; color:#495057; border:1px solid #dee2e6; white-space:nowrap; }
+    .pagination-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.6rem; margin-top:.9rem; padding-top:.75rem; border-top:1px solid var(--border); }
+    .pagination-info { font-size:.75rem; color:var(--text-faint); }
+    .pagination-controls { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+    .page-size-group { display:flex; align-items:center; gap:.25rem; }
+    .page-size-label { font-size:.72rem; color:var(--text-faint); }
+    .page-size-btn { padding:.24rem .6rem; border-radius:var(--radius-pill); border:1px solid var(--border-strong); background:transparent; color:var(--text-muted); font-size:.72rem; font-family:var(--font-body); cursor:pointer; transition:all var(--transition); }
+    .page-size-btn:hover { border-color:var(--accent); color:var(--text); }
+    .page-size-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+    .page-nav { display:flex; align-items:center; gap:.3rem; }
+    .page-btn { display:inline-flex; align-items:center; justify-content:center; min-width:1.8rem; height:1.8rem; padding:0 .35rem; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:transparent; color:var(--text-muted); font-size:.75rem; font-family:var(--font-body); cursor:pointer; transition:all var(--transition); }
+    .page-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+    .page-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+    .page-btn:disabled { opacity:.35; cursor:not-allowed; }
+    .page-ellipsis { color:var(--text-faint); font-size:.75rem; padding:0 .2rem; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -323,9 +126,7 @@
 <div class="page">
   <main>
 
-    <!-- KPIs + Chart -->
     <section class="top-grid">
-
       <div class="panel">
         <div class="panel-header"><span class="panel-title">Indicateurs clés</span></div>
         <div class="kpis">
@@ -357,10 +158,8 @@
         </div>
         <div class="chart-container"><canvas id="cve-chart"></canvas></div>
       </div>
-
     </section>
 
-    <!-- Table -->
     <section class="panel table-panel">
       <div class="table-toolbar">
         <div class="toolbar-left">
@@ -418,29 +217,55 @@
 </div>
 
 <script>
-  /* ── Chip toggle ────────────────────────────────────── */
+  /* ── Chip toggle ────────────────────────────────── */
   document.querySelectorAll('.filter-chip').forEach(chip => {
     const cb = chip.querySelector('input[type="checkbox"]');
     if (!cb) return;
     cb.addEventListener('change', () => chip.classList.toggle('active', cb.checked));
   });
 
-  /* ── Constants ─────────────────────────────────────── */
+  /* ── Constants ──────────────────────────────────── */
   const PRIMARY_DATA_URL  = "./data/windows-10-cve-data.json";
   const FALLBACK_DATA_URL = "./data/windows-10-cve-sample-data.json";
   const NVD_API_BASE      = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=";
 
-  const nvdCache  = new Map();
-  let allCves     = [];
-  let filteredCves = [];
-  let chartInstance = null;
-  let activeMonthFilter = null; // "2026-03" or null
+  const nvdCache        = new Map();
+  let allCves           = [];
+  let filteredCves      = [];
+  let chartInstance     = null;
+  let activeMonthFilter = null;
+  let currentPage       = 1;
+  let pageSize          = 25;
 
-  /* Pagination */
-  let currentPage = 1;
-  let pageSize    = 25;
+  /* ── Field normalisation ───────────────────────────────
+     Accepts BOTH old schema (_cvss_vector, cvss_base_score, published_at)
+     AND new schema (cvss_vector_string, cvss_score, published).
+     Always writes to the internal names so the rest of the code never changes.
+  ───────────────────────────────────────────────────────── */
+  function normalizeCve(c) {
+    // Score : cvss_score (new) || cvss_base_score (old)
+    if (c.cvss_base_score == null && c.cvss_score != null)
+      c.cvss_base_score = c.cvss_score;
 
-  /* ── CVSS helpers ──────────────────────────────────── */
+    // Vector : cvss_vector_string (new) || _cvss_vector (old)
+    if (!c._cvss_vector && c.cvss_vector_string)
+      c._cvss_vector = c.cvss_vector_string;
+
+    // Date : published (new) || published_at (old)
+    if (!c.published_at && c.published)
+      c.published_at = c.published;
+
+    // Reference URL : reference_url (new) || certfr_url (old)
+    if (!c.certfr_url && !c.reference_url && c.reference_url)
+      c.certfr_url = c.reference_url;     // won't trigger
+    // store reference_url for display
+    c._ref_url = c.reference_url || c.certfr_url || null;
+    c._ref_label = c.certfr_id || (c._ref_url ? "Réf. " + c.cve_id : null);
+
+    return c;
+  }
+
+  /* ── CVSS helpers ─────────────────────────────────── */
   function cvssInfo(score) {
     if (score == null || Number.isNaN(score)) return { label:"N/A", cls:"nvd-sev-none" };
     if (score === 0)  return { label:"NONE",     cls:"nvd-sev-none" };
@@ -476,9 +301,9 @@
     const prC={N:"vec-pr-n",L:"vec-pr-l",H:"vec-pr-h"};
     const uiL={N:"UI: None",R:"UI: Req."};
     const uiC={N:"vec-ui-n",R:"vec-ui-r"};
-    const av=`<span class="vec-badge ${avC[p.av]||'vec-unknown'}" title="AV:${avL[p.av]||p.av}">${avL[p.av]||p.av}</span>`;
-    const pr=p.pr?`<span class="vec-badge ${prC[p.pr]||'vec-unknown'}" title="PR:${p.pr}">${prL[p.pr]||'PR:'+p.pr}</span>`:"";
-    const ui=p.ui?`<span class="vec-badge ${uiC[p.ui]||'vec-unknown'}" title="UI:${p.ui}">${uiL[p.ui]||'UI:'+p.ui}</span>`:"";
+    const av=`<span class="vec-badge ${avC[p.av]||'vec-unknown'}" title="AV: ${avL[p.av]||p.av}">${avL[p.av]||p.av}</span>`;
+    const pr=p.pr?`<span class="vec-badge ${prC[p.pr]||'vec-unknown'}" title="PR: ${p.pr}">${prL[p.pr]||'PR:'+p.pr}</span>`:"";
+    const ui=p.ui?`<span class="vec-badge ${uiC[p.ui]||'vec-unknown'}" title="UI: ${p.ui}">${uiL[p.ui]||'UI:'+p.ui}</span>`:"";
     return `<div class="vector-cell">${av}${pr}${ui}</div>`;
   }
 
@@ -487,7 +312,7 @@
     return `<div class="versions-cell">${versions.map(v=>`<span class="ver-badge">${v}</span>`).join('')}</div>`;
   }
 
-  /* ── NVD API ────────────────────────────────────────── */
+  /* ── NVD API (fallback quand le JSON local n'a pas le vecteur) ── */
   async function fetchNvdData(cveId) {
     if (nvdCache.has(cveId)) return nvdCache.get(cveId);
     try {
@@ -505,135 +330,89 @@
     } catch { nvdCache.set(cveId,{score:null,vector:null}); return nvdCache.get(cveId); }
   }
 
-  /* ── Data fetch ─────────────────────────────────────── */
+  /* ── Data fetch ───────────────────────────────────── */
   async function fetchWithFallback() {
-    try {
-      const r=await fetch(PRIMARY_DATA_URL,{cache:"no-store"});
-      if (!r.ok) throw new Error();
-      return {data:await r.json(),isSample:false};
-    } catch {
+    for (const url of [PRIMARY_DATA_URL, FALLBACK_DATA_URL]) {
       try {
-        const r=await fetch(FALLBACK_DATA_URL,{cache:"no-store"});
-        if (!r.ok) throw new Error();
-        return {data:await r.json(),isSample:true};
-      } catch {
-        const a=document.getElementById("kpi-alert");
-        a.style.display="block";
-        a.innerHTML="<strong>Erreur de chargement.</strong> Impossible de charger les données.";
-        return {data:{dataset:{},cves:[]},isSample:true};
-      }
+        const r = await fetch(url, {cache:"no-store"});
+        if (!r.ok) continue;
+        return { data: await r.json(), url };
+      } catch {}
     }
+    const a=document.getElementById("kpi-alert");
+    a.style.display="block";
+    a.innerHTML="<strong>Erreur de chargement.</strong> Impossible de charger les données.";
+    return { data:{cves:[]}, url:null };
   }
 
-  /* ── KPI count-up animation ───────────────────────────── */
-  function animateCount(el, target, duration = 900) {
-    el.classList.remove('animating');
-    void el.offsetWidth; // reflow to restart animation
-    el.classList.add('animating');
-
-    const start = performance.now();
-    // Ease out cubic
-    const ease = t => 1 - Math.pow(1 - t, 3);
-
-    function step(now) {
-      const progress = Math.min((now - start) / duration, 1);
-      el.textContent = Math.round(ease(progress) * target);
-      if (progress < 1) requestAnimationFrame(step);
-      else {
-        el.textContent = target;
-        el.classList.remove('animating');
-      }
-    }
-    requestAnimationFrame(step);
+  /* ── Count-up animation ─────────────────────────────── */
+  function animateCount(el, target, duration=900) {
+    el.classList.remove('animating'); void el.offsetWidth; el.classList.add('animating');
+    const start=performance.now(), ease=t=>1-Math.pow(1-t,3);
+    (function step(now){
+      const p=Math.min((now-start)/duration,1);
+      el.textContent=Math.round(ease(p)*target);
+      if(p<1) requestAnimationFrame(step);
+      else { el.textContent=target; el.classList.remove('animating'); }
+    })(start);
   }
 
-  /* ── KPIs render ──────────────────────────────────────── */
+  /* ── KPIs ─────────────────────────────────────────── */
   function renderKpis(cves) {
     const total    = cves.length;
     const critical = cves.filter(c=>{ const s=parseFloat(c.cvss_base_score); return !isNaN(s)&&s>=8; }).length;
-    const network  = cves.filter(c=>{ const p=parseCvssVector(c._cvss_vector); return p&&p.av==="N"; }).length;
+    const network  = cves.filter(c=>{ const p=parseCvssVector(c._cvss_vector||''); return p&&p.av==="N"; }).length;
     animateCount(document.getElementById("kpi-total-cves"),    total);
     animateCount(document.getElementById("kpi-critical-cves"), critical);
     animateCount(document.getElementById("kpi-network-cves"),  network);
     if (total===0) document.getElementById("kpi-alert").style.display="block";
   }
 
-  /* ── Chart ───────────────────────────────────────────── */
+  /* ── Chart ────────────────────────────────────────── */
   function renderChart(cves) {
-    const buckets = new Map();
-    for (const c of cves) {
-      if (!c.published_at) continue;
-      const m = c.published_at.slice(0,7);
+    const buckets=new Map();
+    for(const c of cves) {
+      if(!c.published_at) continue;
+      const m=c.published_at.slice(0,7);
       buckets.set(m,(buckets.get(m)||0)+1);
     }
-    const series = Array.from(buckets.entries())
-      .sort(([a],[b])=>a<b?-1:a>b?1:0)
-      .map(([month,count])=>({month,count}));
+    const series=Array.from(buckets.entries()).sort(([a],[b])=>a<b?-1:1).map(([month,count])=>({month,count}));
+    const ctx=document.getElementById("cve-chart");
+    if(!ctx||!series.length) return;
+    if(chartInstance){chartInstance.destroy();chartInstance=null;}
 
-    const ctx = document.getElementById("cve-chart");
-    if (!ctx||!series.length) return;
-    if (chartInstance) { chartInstance.destroy(); chartInstance=null; }
+    const barBg  =()=>series.map(d=>activeMonthFilter===d.month?"rgba(0,122,204,0.85)":"rgba(0,122,204,0.25)");
+    const barBdr =()=>series.map(d=>activeMonthFilter===d.month?"rgba(0,122,204,1)":"rgba(0,122,204,0.55)");
 
-    function barColors() {
-      return series.map(d =>
-        activeMonthFilter === d.month
-          ? "rgba(0,122,204,0.85)"
-          : "rgba(0,122,204,0.25)"
-      );
-    }
-    function barBorders() {
-      return series.map(d =>
-        activeMonthFilter === d.month
-          ? "rgba(0,122,204,1)"
-          : "rgba(0,122,204,0.55)"
-      );
-    }
-
-    chartInstance = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: series.map(d=>d.month),
-        datasets: [{
-          label: "CVE / mois",
-          data:  series.map(d=>d.count),
-          backgroundColor: barColors(),
-          borderColor:     barBorders(),
-          borderWidth: 1, borderRadius: 4, maxBarThickness: 38
-        }]
+    chartInstance=new Chart(ctx,{
+      type:"bar",
+      data:{
+        labels:series.map(d=>d.month),
+        datasets:[{label:"CVE / mois",data:series.map(d=>d.count),backgroundColor:barBg(),borderColor:barBdr(),borderWidth:1,borderRadius:4,maxBarThickness:38}]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: {display:false},
-          tooltip: {
-            backgroundColor: "#ffffff",
-            borderColor: "rgba(52,58,64,0.15)",
-            borderWidth: 1,
-            titleColor: "#1d1e20",
-            bodyColor: "#495057",
-            padding: 8,
-            callbacks: {
-              title: items => items[0].label,
-              label: item => ` ${item.parsed.y} CVE${activeMonthFilter===series[item.dataIndex]?.month?' (filtré)':' — cliquer pour filtrer'}`
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:"#ffffff", borderColor:"rgba(52,58,64,.15)", borderWidth:1,
+            titleColor:"#1d1e20", bodyColor:"#495057", padding:8,
+            callbacks:{
+              title:items=>items[0].label,
+              label:item=>` ${item.parsed.y} CVE${activeMonthFilter===series[item.dataIndex]?.month?' (filtré)':' — cliquer pour filtrer'}`
             }
           }
         },
-        scales: {
-          x: { grid:{display:false}, ticks:{font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"}, border:{color:"rgba(52,58,64,0.1)"} },
-          y: { beginAtZero:true, grid:{color:"rgba(52,58,64,0.06)"}, ticks:{stepSize:1,font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"}, border:{color:"rgba(52,58,64,0.1)"} }
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"},border:{color:"rgba(52,58,64,.1)"}},
+          y:{beginAtZero:true,grid:{color:"rgba(52,58,64,.06)"},ticks:{stepSize:1,font:{size:10,family:"'Inter',sans-serif"},color:"#868e96"},border:{color:"rgba(52,58,64,.1)"}}
         },
-        onClick(evt, elements) {
-          if (!elements.length) return;
-          const idx   = elements[0].index;
-          const month = series[idx].month;
-          if (activeMonthFilter === month) {
-            activeMonthFilter = null; // toggle off
-          } else {
-            activeMonthFilter = month;
-          }
-          // Update bar colors
-          chartInstance.data.datasets[0].backgroundColor = barColors();
-          chartInstance.data.datasets[0].borderColor     = barBorders();
+        onClick(evt,elements){
+          if(!elements.length) return;
+          const month=series[elements[0].index].month;
+          activeMonthFilter=activeMonthFilter===month?null:month;
+          chartInstance.data.datasets[0].backgroundColor=barBg();
+          chartInstance.data.datasets[0].borderColor=barBdr();
           chartInstance.update('none');
           updateMonthBadge();
           renderTable(allCves);
@@ -642,62 +421,47 @@
     });
   }
 
-  /* ── Month filter badge (near table title) ──────────────── */
+  /* ── Month badge ────────────────────────────────────── */
   function updateMonthBadge() {
-    const container = document.getElementById("month-filter-badge-container");
-    if (!container) return;
-    if (!activeMonthFilter) {
-      container.innerHTML = "";
-      return;
-    }
-    container.innerHTML =
-      `<span class="month-filter-badge" id="month-badge" title="Cliquer pour effacer">
-        📅 ${activeMonthFilter}
-        <span class="x">✕</span>
-      </span>`;
-    document.getElementById("month-badge").addEventListener("click", () => {
-      activeMonthFilter = null;
-      if (chartInstance) {
-        chartInstance.data.datasets[0].backgroundColor = chartInstance.data.datasets[0].backgroundColor.map(()=>"rgba(0,122,204,0.25)");
-        chartInstance.data.datasets[0].borderColor     = chartInstance.data.datasets[0].borderColor.map(()=>"rgba(0,122,204,0.55)");
+    const c=document.getElementById("month-filter-badge-container");
+    if(!c) return;
+    if(!activeMonthFilter){c.innerHTML="";return;}
+    c.innerHTML=`<span class="month-filter-badge" id="month-badge" title="Cliquer pour effacer">📅 ${activeMonthFilter} <span class="x">✕</span></span>`;
+    document.getElementById("month-badge").addEventListener("click",()=>{
+      activeMonthFilter=null;
+      if(chartInstance){
+        chartInstance.data.datasets[0].backgroundColor=chartInstance.data.datasets[0].backgroundColor.map(()=>"rgba(0,122,204,0.25)");
+        chartInstance.data.datasets[0].borderColor=chartInstance.data.datasets[0].borderColor.map(()=>"rgba(0,122,204,0.55)");
         chartInstance.update('none');
       }
-      updateMonthBadge();
-      renderTable(allCves);
+      updateMonthBadge(); renderTable(allCves);
     });
   }
 
-  /* ── Pagination helpers ──────────────────────────────── */
-  const totalPages  = () => pageSize===0 ? 1 : Math.max(1, Math.ceil(filteredCves.length/pageSize));
-  const getPageSlice = () => pageSize===0 ? filteredCves : filteredCves.slice((currentPage-1)*pageSize, currentPage*pageSize);
+  /* ── Pagination ─────────────────────────────────────── */
+  const totalPages  =()=>pageSize===0?1:Math.max(1,Math.ceil(filteredCves.length/pageSize));
+  const getPageSlice=()=>pageSize===0?filteredCves:filteredCves.slice((currentPage-1)*pageSize,currentPage*pageSize);
 
-  function renderPaginationBar() {
-    const total=filteredCves.length, tp=totalPages();
-    const infoEl=document.getElementById("pagination-info");
-    const navEl =document.getElementById("page-nav");
-
-    if (pageSize===0) {
+  function renderPaginationBar(){
+    const total=filteredCves.length,tp=totalPages();
+    const infoEl=document.getElementById("pagination-info"),navEl=document.getElementById("page-nav");
+    if(pageSize===0){
       infoEl.textContent=`${total} entrée(s) sur ${allCves.length} au total`;
     } else {
-      const s=Math.min((currentPage-1)*pageSize+1,total);
-      const e=Math.min(currentPage*pageSize,total);
+      const s=Math.min((currentPage-1)*pageSize+1,total),e=Math.min(currentPage*pageSize,total);
       infoEl.textContent=total>0?`${s}–${e} sur ${total} (total : ${allCves.length})`:`0 résultat (total : ${allCves.length})`;
     }
-
     navEl.innerHTML="";
-    if (tp<=1) return;
-
+    if(tp<=1) return;
     const mkBtn=(label,page,active=false,disabled=false)=>{
       const b=document.createElement("button");
-      b.className="page-btn"+(active?" active":"");
-      b.textContent=label; b.disabled=disabled;
-      if (!disabled&&!active) b.addEventListener("click",()=>{currentPage=page;renderTablePage();});
+      b.className="page-btn"+(active?" active":""); b.textContent=label; b.disabled=disabled;
+      if(!disabled&&!active) b.addEventListener("click",()=>{currentPage=page;renderTablePage();});
       return b;
     };
-
     navEl.appendChild(mkBtn("‹",currentPage-1,false,currentPage===1));
     const pages=[];
-    if (tp<=7){for(let i=1;i<=tp;i++)pages.push(i);}
+    if(tp<=7){for(let i=1;i<=tp;i++)pages.push(i);}
     else{
       pages.push(1);
       if(currentPage>3)pages.push("…");
@@ -712,39 +476,40 @@
     navEl.appendChild(mkBtn("›",currentPage+1,false,currentPage===tp));
   }
 
-  /* ── Table page render ────────────────────────────────── */
-  function renderTablePage() {
+  /* ── Table page render ──────────────────────────────── */
+  function renderTablePage(){
     const tbody=document.getElementById("cve-table-body");
-    if (!tbody) return;
+    if(!tbody) return;
     tbody.innerHTML="";
-
-    for (const c of getPageSlice()) {
+    for(const c of getPageSlice()){
       const tr=document.createElement("tr");
       tr.dataset.cveId=c.cve_id;
       const nvdUrl=`https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
       const jScore=typeof c.cvss_base_score==="number"?c.cvss_base_score:parseFloat(c.cvss_base_score);
       const hasScore=!isNaN(jScore)&&c.cvss_base_score!=null;
-      const certfrPart=c.certfr_url
-        ?`<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id||"CERTFR"}</a>`:""
+      const hasVector=!!c._cvss_vector;
+      // Extra ref link (MSRC / CERTFR / other)
+      const refPart=c._ref_url
+        ?`<span class="refs-sep">·</span><a href="${c._ref_url}" target="_blank" rel="noopener noreferrer">${c._ref_label||"Réf. " + c.cve_id}</a>`:""
       tr.innerHTML=`
         <td class="cve-id">${c.cve_id}</td>
         <td class="date-cell">${c.published_at||"–"}</td>
         <td class="score-cell">${hasScore?buildNvdBadge(c.cve_id,jScore):`<span class="score-loading">…</span>`}</td>
         <td>${c.impact_type||"–"}</td>
-        <td class="vector-cell-td">${c._cvss_vector?buildVectorBadges(c._cvss_vector):`<span class="score-loading">…</span>`}</td>
+        <td class="vector-cell-td">${hasVector?buildVectorBadges(c._cvss_vector):`<span class="score-loading">…</span>`}</td>
         <td>${buildVersionsBadges(c.windows_10_versions)}</td>
-        <td><div class="refs-cell"><a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD ↗</a>${certfrPart}</div></td>
+        <td><div class="refs-cell"><a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD ↗</a>${refPart}</div></td>
       `;
       tbody.appendChild(tr);
 
-      if (!hasScore||!c._cvss_vector) {
+      // Only call NVD API if we truly have no score AND no vector from the local JSON
+      if(!hasScore||!hasVector){
         const sc=tr.querySelector(".score-cell");
         const vc=tr.querySelector(".vector-cell-td");
         fetchNvdData(c.cve_id).then(({score,vector})=>{
-          if (score!=null) c.cvss_base_score=score;
-          if (vector)      c._cvss_vector=vector;
-          if (!hasScore&&score!=null&&!isNaN(score)) sc.innerHTML=buildNvdBadge(c.cve_id,score);
-          vc.innerHTML=vector?buildVectorBadges(vector):`<span class="vec-badge vec-unknown">–</span>`;
+          if(score!=null&&c.cvss_base_score==null){ c.cvss_base_score=score; sc.innerHTML=buildNvdBadge(c.cve_id,score); }
+          if(vector&&!c._cvss_vector){ c._cvss_vector=vector; }
+          vc.innerHTML=c._cvss_vector?buildVectorBadges(c._cvss_vector):`<span class="vec-badge vec-unknown">–</span>`;
           updateNetworkKpi();
         });
       }
@@ -752,57 +517,50 @@
     renderPaginationBar();
   }
 
-  /* ── Full filter + render ─────────────────────────────── */
-  function renderTable(cves) {
-    const fCrit = document.getElementById("filter-critical").checked;
-    const fNet  = document.getElementById("filter-network").checked;
-    const sort  = document.getElementById("sort-cvss").value;
-
-    let result = [...cves];
-
-    // Month filter from chart click
-    if (activeMonthFilter) {
-      result = result.filter(c => c.published_at && c.published_at.startsWith(activeMonthFilter));
-    }
-    if (fCrit) result=result.filter(c=>{const s=parseFloat(c.cvss_base_score);return !isNaN(s)&&s>=8;});
-    if (fNet)  result=result.filter(c=>{const p=parseCvssVector(c._cvss_vector||"");return p&&p.av==="N";});
-    if (sort!=="none") {
+  /* ── Full filter + render ────────────────────────────── */
+  function renderTable(cves){
+    const fCrit=document.getElementById("filter-critical").checked;
+    const fNet =document.getElementById("filter-network").checked;
+    const sort =document.getElementById("sort-cvss").value;
+    let result=[...cves];
+    if(activeMonthFilter) result=result.filter(c=>c.published_at&&c.published_at.startsWith(activeMonthFilter));
+    if(fCrit) result=result.filter(c=>{const s=parseFloat(c.cvss_base_score);return !isNaN(s)&&s>=8;});
+    if(fNet)  result=result.filter(c=>{const p=parseCvssVector(c._cvss_vector||'');return p&&p.av==="N";});
+    if(sort!=="none"){
       result.sort((a,b)=>{
         const av=isNaN(parseFloat(a.cvss_base_score))?-Infinity:parseFloat(a.cvss_base_score);
         const bv=isNaN(parseFloat(b.cvss_base_score))?-Infinity:parseFloat(b.cvss_base_score);
         return sort==="desc"?bv-av:av-bv;
       });
     }
-    filteredCves=result;
-    currentPage=1;
-    renderTablePage();
+    filteredCves=result; currentPage=1; renderTablePage();
   }
 
-  function updateNetworkKpi() {
-    const count=allCves.filter(c=>{const p=parseCvssVector(c._cvss_vector||"");return p&&p.av==="N";}).length;
+  function updateNetworkKpi(){
+    const count=allCves.filter(c=>{const p=parseCvssVector(c._cvss_vector||'');return p&&p.av==="N";}).length;
     const el=document.getElementById("kpi-network-cves");
-    if (el) el.textContent=count;
+    if(el) el.textContent=count;
   }
 
-  /* ── Page-size buttons ───────────────────────────────── */
+  /* ── Page-size buttons ──────────────────────────────── */
   document.querySelectorAll('.page-size-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       document.querySelectorAll('.page-size-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       pageSize=btn.dataset.size==="all"?0:parseInt(btn.dataset.size,10);
-      currentPage=1;
-      renderTablePage();
+      currentPage=1; renderTablePage();
     });
   });
 
-  /* ── Bootstrap ───────────────────────────────────────── */
-  async function bootstrap() {
-    const {data,isSample}=await fetchWithFallback();
-    const cves=Array.isArray(data.cves)?data.cves:[];
-    allCves=cves;
-    renderKpis(cves);
-    renderChart(cves);
-    renderTable(cves);
+  /* ── Bootstrap ─────────────────────────────────────── */
+  async function bootstrap(){
+    const {data}=await fetchWithFallback();
+    // Support both root-level "cves" array and nested structures
+    const raw=Array.isArray(data.cves)?data.cves:Array.isArray(data)?data:[];
+    allCves=raw.map(normalizeCve);
+    renderKpis(allCves);
+    renderChart(allCves);
+    renderTable(allCves);
     document.getElementById("filter-critical").addEventListener("change",()=>renderTable(allCves));
     document.getElementById("filter-network").addEventListener("change", ()=>renderTable(allCves));
     document.getElementById("sort-cvss").addEventListener("change",      ()=>renderTable(allCves));
