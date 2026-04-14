@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Wrapper de pipeline pour l'observatoire Windows 10 basé sur CERT-FR + NVD.
+"""LEGACY / EXPERIMENTAL
 
-Ce script exécute successivement :
-
-- tools/build_certfr_cve_index.py
-- tools/enrich_cve_with_nvd.py
-
-Il remplace l'ancien pipeline basé sur le scraping HTML des ACT.
+Ce wrapper correspond à l'ancien pipeline CERT-FR + NVD pour l'observatoire Windows 10.
+Il n'est plus utilisé par le workflow principal, qui interroge désormais directement la NVD
+via tools/fetch_cve_windows10.py.
 """
 
 import runpy
