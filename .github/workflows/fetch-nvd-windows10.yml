@@ -29,11 +29,17 @@ jobs:
         run: |
           python tools/fetch_cve_windows10.py
 
-      - name: Upload data/cve_windows10.json as artifact
+      - name: Build frontend dataset (CERT-FR compatible JSON)
+        run: |
+          python tools/build_windows10_frontend_data.py
+
+      - name: Upload NVD datasets as artifact
         uses: actions/upload-artifact@v4
         with:
           name: cve-windows10-json
-          path: data/cve_windows10.json
+          path: |
+            data/cve_windows10.json
+            data/windows-10-certfr-data.json
 
       - name: Commit and push updated dataset
         if: github.event_name == 'workflow_dispatch' && env.ALLOW_DATASET_COMMIT == 'true'
@@ -41,11 +47,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ALLOW_DATASET_COMMIT: ${{ vars.ALLOW_DATASET_COMMIT }}
         run: |
-          if [[ -n "$(git status --porcelain data/cve_windows10.json)" ]]; then
+          if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-certfr-data.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/cve_windows10.json
-            git commit -m "chore: update NVD Windows 10 CVE dataset"
+            git add data/cve_windows10.json data/windows-10-certfr-data.json
+            git commit -m "chore: update NVD Windows 10 datasets"
             git push
           else
-            echo "No changes in dataset, nothing to commit."
+            echo "No changes in datasets, nothing to commit."
