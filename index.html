@@ -297,6 +297,59 @@
       font-size: 0.75rem;
       color: var(--muted);
     }
+
+    /* NVD score badge — lien cliquable style NVD */
+    .nvd-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      text-decoration: none;
+      border-radius: 4px;
+      overflow: hidden;
+      font-size: 0.72rem;
+      font-weight: 600;
+      line-height: 1;
+      vertical-align: middle;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+      transition: opacity 0.15s ease;
+    }
+
+    .nvd-badge:hover {
+      opacity: 0.82;
+    }
+
+    .nvd-badge-score {
+      padding: 0.28rem 0.42rem;
+      background: #374151;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    .nvd-badge-label {
+      padding: 0.28rem 0.48rem;
+      color: #ffffff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Couleurs par sévérité CVSS v3 */
+    .nvd-sev-none     { background: #6b7280; } /* gris  */
+    .nvd-sev-low      { background: #ca8a04; } /* jaune */
+    .nvd-sev-medium   { background: #ea580c; } /* orange */
+    .nvd-sev-high     { background: #dc2626; } /* rouge */
+    .nvd-sev-critical { background: #7c3aed; } /* violet */
+
+    .refs-cell {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .refs-sep {
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -406,6 +459,20 @@
 
     let allCves = [];
     let chartInstance = null;
+
+    /**
+     * Retourne la sévérité CVSS v3 et la classe CSS associée.
+     * Seuils officiels NVD : None 0.0, Low 0.1–3.9, Medium 4.0–6.9,
+     *                        High 7.0–8.9, Critical 9.0–10.0
+     */
+    function cvssInfo(score) {
+      if (Number.isNaN(score) || score == null) return { label: "N/A", cls: "nvd-sev-none" };
+      if (score === 0)   return { label: "NONE",     cls: "nvd-sev-none" };
+      if (score < 4.0)   return { label: "LOW",      cls: "nvd-sev-low" };
+      if (score < 7.0)   return { label: "MEDIUM",   cls: "nvd-sev-medium" };
+      if (score < 9.0)   return { label: "HIGH",     cls: "nvd-sev-high" };
+      return               { label: "CRITICAL", cls: "nvd-sev-critical" };
+    }
 
     async function fetchWithFallback() {
       console.log("init dashboard");
@@ -595,6 +662,19 @@
         const isExploited = status === "exploited" || status === "poc";
 
         const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
+        const sev = cvssInfo(score);
+        const scoreDisplay = (!Number.isNaN(score) && score != null) ? score.toFixed(1) : "N/A";
+
+        const nvdBadge = `<a href="${nvdUrl}" target="_blank" rel="noopener noreferrer"
+            class="nvd-badge"
+            title="Voir ${c.cve_id} sur NVD (Base Score ${scoreDisplay} – ${sev.label})"
+          ><span class="nvd-badge-score">${scoreDisplay}</span
+          ><span class="nvd-badge-label ${sev.cls}">${sev.label}</span
+        ></a>`;
+
+        const certfrPart = c.certfr_url
+          ? `<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
+          : "";
 
         tr.innerHTML = `
           <td class="cve-id">${c.cve_id}</td>
@@ -602,12 +682,7 @@
           <td>${Number.isNaN(score) || score == null ? "" : score.toFixed(1)}</td>
           <td>${c.impact_type || ""}</td>
           <td>${(c.windows_10_versions || []).join(", ")}</td>
-          <td>
-            <a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD</a>${c.certfr_url
-              ? ` · <a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
-              : ""
-            }
-          </td>
+          <td><div class="refs-cell">${nvdBadge}${certfrPart}</div></td>
         `;
 
         if (isCritical || isExploited) {
