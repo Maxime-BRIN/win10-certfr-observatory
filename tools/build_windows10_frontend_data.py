@@ -2,7 +2,7 @@
 """Build frontend-compatible dataset from NVD Windows 10 CVE data.
 
 This script reads data/cve_windows10.json (NVD-oriented schema) and
-produces data/windows-10-certfr-data.json matching the legacy frontend
+produces data/windows-10-cve-data.json matching the legacy frontend
 schema expected by index.html.
 
 Mapping rules (fixed by design):
@@ -28,7 +28,7 @@ from typing import Any, Dict, List
 # Paths
 ROOT_DIR = Path(__file__).resolve().parents[1]
 NVD_INPUT_PATH = ROOT_DIR / "data" / "cve_windows10.json"
-FRONTEND_OUTPUT_PATH = ROOT_DIR / "data" / "windows-10-certfr-data.json"
+FRONTEND_OUTPUT_PATH = ROOT_DIR / "data" / "windows-10-cve-data.json"
 
 
 @dataclass
