@@ -45,6 +45,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+          git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json || true
           if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -53,3 +55,4 @@ jobs:
             git push
           else
             echo "No changes in datasets, nothing to commit."
+          fi
