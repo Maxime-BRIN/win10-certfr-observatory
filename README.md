@@ -1,85 +1,168 @@
-# Observatoire Windows 10 – données NVD
+# 🔍 CVE Windows 10 – Observatoire NVD
 
-Ce dépôt contient l'outillage et les fichiers nécessaires pour construire un petit tableau de bord statique autour des vulnérabilités Windows 10.
+> Tableau de bord statique HTML de surveillance des CVE affectant Windows 10, alimenté automatiquement par l'API NVD (NIST) via GitHub Actions.
 
-L'observatoire est désormais **alimenté par la NVD (National Vulnerability Database)**, avec un jeu de données reconstruit pour rester compatible avec l'ancien frontend.
+[![Mise à jour automatique](https://github.com/Maxime-BRIN/win10-cve-observatory/actions/workflows/fetch-nvd-windows10.yml/badge.svg)](https://github.com/Maxime-BRIN/win10-cve-observatory/actions/workflows/fetch-nvd-windows10.yml)
 
-## Pipeline de données
+---
 
-### Nouveau pipeline (NVD – pipeline officiel)
+## 🎯 Objectif
 
-Le pipeline principal repose sur la NVD et fonctionne ainsi :
+Offrir une interface web légère et autonome pour visualiser, filtrer et analyser les CVE Windows 10 publiées depuis le **14 octobre 2025** (fin de support étendu de Windows 10), directement depuis les données officielles du [NVD (NIST)](https://nvd.nist.gov/).
 
-- `tools/fetch_cve_windows10.py` interroge l'API NVD 2.0 (`/rest/json/cves/2.0`) pour plusieurs CPE Windows 10 x64 explicites (1607, 1709, 1909, 21H2, 22H2).
-- Le script agrège et déduplique les CVE par `cve_id`, puis écrit un dataset brut NVD :
-  - `data/cve_windows10.json` avec la structure :
-    - `generated_at`, `coverage_start`, `coverage_end`
-    - `cves[]` contenant `cve_id`, `published`, `cvss_score`, `cvss_severity`, `summary`.
-- `tools/build_windows10_frontend_data.py` lit ce dataset NVD et construit un fichier **compatible avec l'ancien schéma frontend** :
-  - `data/windows-10-certfr-data.json` avec la structure :
-    - `dataset.coverage_start`, `dataset.coverage_end`
-    - `cves[]` avec au minimum :
-      - `cve_id`
-      - `published_at` (depuis `published`)
-      - `cvss_base_score` (depuis `cvss_score`)
-      - `exploitation_status` (actuellement `"unknown"`)
-      - `impact_type` (actuellement `"unknown"`)
-      - `windows_10_versions` (dérivées grossièrement des CPE Windows 10 x64)
-      - `certfr_url`, `certfr_id` (actuellement vides).
-- Le workflow GitHub Actions `.github/workflows/fetch-nvd-windows10.yml` :
-  - s'exécute via `workflow_dispatch` et `schedule`,
-  - installe Python et `requests`,
-  - lance `python tools/fetch_cve_windows10.py`,
-  - lance `python tools/build_windows10_frontend_data.py`,
-  - publie les deux fichiers JSON comme artefacts et, si `ALLOW_DATASET_COMMIT=true`, les commite dans la branche.
+---
 
-Ce pipeline NVD est le **chemin officiel** désormais utilisé par le site statique.
+## 📸 Fonctionnalités
 
-### Ancien pipeline (CERT-FR – LEGACY / OFFLINE)
+| Fonctionnalité | Détail |
+|---|---|
+| **KPIs dynamiques** | Total CVE, CVE CVSS ≥ 8, CVE réseau (AV:N), avec animation count-up |
+| **Graphique mensuel** | Histogramme interactif — clic sur une barre pour filtrer le tableau |
+| **Tableau détaillé** | CVE, date, score NVD (badge coloré), type d'impact, vecteur CVSS, versions Win 10, référence NVD/CERTFR |
+| **Badge CVSS coloré** | Score + sévérité (NONE/LOW/MEDIUM/HIGH/CRITICAL) selon NVD CVSS v3 |
+| **Filtres** | CVSS ≥ 8, Réseau (AV:N), tri par score croissant/décroissant |
+| **Filtre par mois** | Clic sur le graphique → badge de filtre actif avec suppression rapide |
+| **Pagination** | 15 (défaut) / 25 / 50 / 100 / TOUS |
+| **Vecteur CVSS visuel** | Badges colorés AV · PR · UI |
+| **0 dépendance serveur** | Fichier HTML unique + JSON statiques, hébergeable sur GitHub Pages |
 
-Historiquement, le projet s'appuyait sur les flux CERT-FR (avis/alertes) pour identifier les CVE Windows 10, puis enrichir via la NVD. Ce pipeline est conservé uniquement pour usage manuel ou pour comparaison méthodologique.
+---
 
-Les scripts suivants sont marqués explicitement comme LEGACY / EXPERIMENTAL et ne sont plus appelés par la CI :
+## 🗂️ Structure du projet
 
-- `tools/build_certfr_cve_index.py`
-- `tools/enrich_cve_with_nvd.py`
-- `tools/fetch_certfr_win10.py`
+```
+win10-cve-observatory/
+│
+├── index.html                            # Interface principale (SPA statique)
+├── methodology.html                      # Page de méthodologie
+├── requirements.txt                      # Dépendances Python (requests, beautifulsoup4)
+│
+├── data/
+│   ├── windows-10-cve-data.json          # ✅ Dataset principal (utilisé par le frontend)
+│   └── cve_windows10.json                # Dataset brut généré par fetch_cve_windows10.py
+│
+├── tools/
+│   ├── fetch_cve_windows10.py            # Récupération CVE depuis l'API NVD
+│   ├── enrich_cve_with_nvd.py            # Enrichissement CVSS/vecteur via NVD
+│   ├── build_windows10_frontend_data.py  # Transformation → windows-10-cve-data.json
+│   └── build_certfr_cve_index.py         # (Utilitaire CERTFR – usage ponctuel)
+│
+└── .github/
+    └── workflows/
+        └── fetch-nvd-windows10.yml       # CI/CD : mise à jour automatique quotidienne
+```
 
-Le workflow CI associé (`.github/workflows/fetch-certfr.yml`) a été supprimé : **aucun workflow GitHub Actions ne s'appuie plus sur CERT-FR**.
+---
 
-## Frontend (site statique)
+## ⚙️ Pipeline de données
 
-Le tableau de bord principal est servi via `index.html` (static, sans framework JS). Il consomme :
+```
+API NVD (NIST)
+    │
+    ▼
+fetch_cve_windows10.py
+    │  → data/cve_windows10.json  (données brutes)
+    ▼
+build_windows10_frontend_data.py
+    │  → data/windows-10-cve-data.json  (données normalisées pour le frontend)
+    ▼
+index.html  (lecture JSON statique, rendu côté client)
+```
 
-- `./data/windows-10-certfr-data.json` comme source principale (format compat avec l'ancien modèle),
-- `./data/windows-10-certfr-sample-data.json` comme fallback si le dataset principal est absent.
+L'enrichissement CVSS supplémentaire (`enrich_cve_with_nvd.py`) peut être exécuté manuellement si des scores sont manquants dans le JSON brut. Le frontend dispose également d'un **fallback NVD API** (appel direct côté navigateur) pour compléter les scores manquants à la volée.
 
-Les pages HTML se trouvent à la racine du dépôt :
+---
 
-- `index.html` : vue principale (KPI, histogramme des CVE par mois, tableau détaillé).
-- `methodology.html` : explications sur le périmètre et les choix méthodologiques.
+## 🤖 Automatisation GitHub Actions
 
-Même si le nom du fichier JSON inclut encore `certfr` pour compatibilité, le contenu est désormais **entièrement construit à partir de CVE NVD**, avec :
+Le workflow **`fetch-nvd-windows10.yml`** s'exécute :
+- **Tous les jours à 06h00 UTC** (cron)
+- **Manuellement** via `workflow_dispatch`
 
-- une reconstruction minimale des métadonnées attendues par le frontend,
-- des champs liés à CERT-FR (`certfr_url`, `certfr_id`) laissés vides par défaut,
-- `exploitation_status` et `impact_type` initialisés à `"unknown"`.
+### Étapes du workflow
 
-## Scripts principaux
+1. Checkout du dépôt
+2. Setup Python 3.11
+3. Installation de `requests`
+4. Exécution de `fetch_cve_windows10.py` (requiert `NVD_API_KEY` en secret)
+5. Exécution de `build_windows10_frontend_data.py`
+6. Upload des datasets en artifact
+7. Commit + push automatique si les données ont changé
 
-- `tools/fetch_cve_windows10.py` :
-  - pipeline NVD officiel (multi-CPE Windows 10 x64, fenêtres de dates découpées, gestion basique du rate limit 429),
-  - écrit `data/cve_windows10.json`.
-- `tools/build_windows10_frontend_data.py` :
-  - construit `data/windows-10-certfr-data.json` au format attendu par le frontend,
-  - ne lit que `cve_windows10.json` (aucune dépendance aux scripts CERT-FR).
+### Secret requis
 
-Les autres scripts Python marqués LEGACY ne sont pas utilisés par les workflows et ne doivent pas être considérés comme partie du chemin de données officiel.
+| Secret | Rôle |
+|---|---|
+| `NVD_API_KEY` | Clé API NVD pour lever la limite de taux (optionnel mais recommandé) |
 
-## Déploiement
+> Sans clé API, le script fonctionne mais est limité à ~5 requêtes/30 secondes.
 
-Le site peut être servi directement depuis GitHub Pages ou tout autre hébergement statique en exposant :
+---
 
-- `index.html` et `methodology.html`,
-- le répertoire `data/` contenant `windows-10-certfr-data.json` (et éventuellement un échantillon),
-- les fichiers JSON mis à jour via le workflow NVD.
+## 🚀 Déploiement local
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/Maxime-BRIN/win10-cve-observatory.git
+cd win10-cve-observatory
+
+# Installer les dépendances Python
+pip install -r requirements.txt
+
+# (Optionnel) Regénérer les données
+export NVD_API_KEY="votre_cle"
+python tools/fetch_cve_windows10.py
+python tools/build_windows10_frontend_data.py
+
+# Servir le frontend
+python -m http.server 8080
+# Ouvrir http://localhost:8080
+```
+
+---
+
+## 🌐 Déploiement GitHub Pages
+
+1. Aller dans **Settings → Pages**
+2. Source : `main` / `/ (root)`
+3. L'URL sera : `https://maxime-brin.github.io/win10-cve-observatory/`
+
+---
+
+## 📊 Format des données (`windows-10-cve-data.json`)
+
+```json
+{
+  "cves": [
+    {
+      "cve_id": "CVE-2025-XXXXX",
+      "published": "2025-11-12",
+      "cvss_score": 7.8,
+      "cvss_vector_string": "AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "Elevation of Privilege",
+      "windows_10_versions": ["21H2", "22H2"],
+      "certfr_id": "CERTFR-2025-AVI-XXXX",
+      "certfr_url": "https://www.cert.ssi.gouv.fr/avis/CERTFR-2025-AVI-XXXX/"
+    }
+  ]
+}
+```
+
+---
+
+## 🛠️ Technologies
+
+| Composant | Technologie |
+|---|---|
+| Frontend | HTML5 / CSS3 / Vanilla JS (ES2020+) |
+| Graphiques | [Chart.js](https://www.chartjs.org/) (CDN) |
+| Typographie | Google Fonts – Lato + Inter |
+| Données | JSON statique (NVD API) |
+| Automatisation | GitHub Actions (Python 3.11) |
+| Scraping/enrichissement | Python – `requests`, `beautifulsoup4` |
+
+---
+
+## 📝 Licence
+
+Projet personnel à des fins de veille et démonstration. Données issues du [NVD (NIST)](https://nvd.nist.gov/) – domaine public.
