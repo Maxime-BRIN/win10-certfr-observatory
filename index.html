@@ -594,6 +594,8 @@
         const status = (c.exploitation_status || "").toLowerCase();
         const isExploited = status === "exploited" || status === "poc";
 
+        const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
+
         tr.innerHTML = `
           <td class="cve-id">${c.cve_id}</td>
           <td>${c.published_at || ""}</td>
@@ -601,8 +603,8 @@
           <td>${c.impact_type || ""}</td>
           <td>${(c.windows_10_versions || []).join(", ")}</td>
           <td>
-            ${c.certfr_url
-              ? `<a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "Lien"}</a>`
+            <a href="${nvdUrl}" target="_blank" rel="noopener noreferrer">NVD</a>${c.certfr_url
+              ? ` · <a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
               : ""
             }
           </td>
