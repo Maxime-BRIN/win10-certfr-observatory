@@ -14,6 +14,7 @@ import datetime as dt
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 
@@ -45,6 +46,10 @@ OUTPUT_PATH = os.path.join("data", "cve_windows10.json")
 
 # Optional: use NVD API key from env if available to improve rate limits
 NVD_API_KEY_ENV = "NVD_API_KEY"
+
+# Simple rate limit handling for 429 responses
+MAX_RETRIES_429 = 3
+RETRY_SLEEP_SECONDS = 5
 
 
 # --- Data structures -------------------------------------------------------
@@ -105,30 +110,48 @@ def get_nvd_headers() -> Dict[str, str]:
 def call_nvd_once(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Perform a single NVD request with given params.
 
-    Returns parsed JSON on 200, None on HTTP error or JSON decode error.
+    Handles HTTP 429 with a small bounded backoff. Returns parsed JSON on 200,
+    None on repeated 429 or other HTTP/JSON errors.
     """
     headers = get_nvd_headers()
 
-    print(f"[DEBUG] NVD URL: {NVD_API_BASE} params={params}")
-    try:
-        resp = requests.get(NVD_API_BASE, params=params, headers=headers, timeout=30)
-    except requests.RequestException as exc:
-        print(f"[ERROR] NVD request failed: {exc}", file=sys.stderr)
-        return None
+    for attempt in range(1, MAX_RETRIES_429 + 1):
+        print(f"[DEBUG] NVD URL: {NVD_API_BASE} params={params} (attempt {attempt}/{MAX_RETRIES_429})")
+        try:
+            resp = requests.get(NVD_API_BASE, params=params, headers=headers, timeout=30)
+        except requests.RequestException as exc:
+            print(f"[ERROR] NVD request failed: {exc}", file=sys.stderr)
+            return None
 
-    if resp.status_code != 200:
-        snippet = resp.text[:200] if resp.text else ""
-        print(
-            f"[ERROR] NVD API returned status {resp.status_code}: {snippet}",
-            file=sys.stderr,
-        )
-        return None
+        if resp.status_code == 429:
+            print(
+                f"[WARN] NVD rate limit hit (429), backing off {RETRY_SLEEP_SECONDS}s before retry...",
+                file=sys.stderr,
+            )
+            if attempt == MAX_RETRIES_429:
+                print(
+                    "[WARN] NVD still returning 429 after max retries; skipping this window/CPE.",
+                    file=sys.stderr,
+                )
+                return None
+            time.sleep(RETRY_SLEEP_SECONDS)
+            continue
 
-    try:
-        return resp.json()
-    except Exception as exc:
-        print(f"[ERROR] Failed to decode NVD response as JSON: {exc}", file=sys.stderr)
-        return None
+        if resp.status_code != 200:
+            snippet = resp.text[:200] if resp.text else ""
+            print(
+                f"[ERROR] NVD API returned status {resp.status_code}: {snippet}",
+                file=sys.stderr,
+            )
+            return None
+
+        try:
+            return resp.json()
+        except Exception as exc:
+            print(f"[ERROR] Failed to decode NVD response as JSON: {exc}", file=sys.stderr)
+            return None
+
+    return None
 
 
 def extract_cvss_v3(metrics: Dict[str, Any]) -> (Optional[float], Optional[str]):
@@ -221,7 +244,7 @@ def fetch_cves_for_window(
         params = build_nvd_params(cpe_name, window_start, window_end, start_index=start_index)
         payload = call_nvd_once(params)
         if payload is None:
-            # On error, stop for this window.
+            # On error (including repeated 429), stop for this window.
             break
 
         if total_results is None:
