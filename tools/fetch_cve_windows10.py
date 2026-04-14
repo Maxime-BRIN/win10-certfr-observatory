@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Fetch CVE impacting Windows 10 directly from the NVD API.
+"""Fetch CVE impacting Windows 10 from the CVE.org (MITRE) API.
 
-This minimal script queries the NVD API for CVE where the CPE matches
-several explicit Windows 10 x64 CPEs in a publication window, then
-writes a single JSON file to data/cve_windows10.json.
+Strategy:
+  1. Query the CVE.org search endpoint for all CVEs published by
+     Microsoft Corporation in the coverage window.
+  2. Filter client-side to keep only CVEs whose affected products
+     contain "Windows 10".
+  3. Fetch each CVE's detail record to extract CVSS metrics, affected
+     Windows 10 versions, description, and reference URL.
+  4. Write a single JSON file to data/cve_windows10.json.
 
 Dependencies: Python 3.11, requests.
 """
@@ -15,50 +20,39 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
 import requests
 
 
-# --- Configuration ---------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
 
-# NVD CVE 2.0 endpoint (documenté)
-NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+CVE_ORG_SEARCH  = "https://cveawg.mitre.org/api/cve-search"
+CVE_ORG_DETAIL  = "https://cveawg.mitre.org/api/cve/{cve_id}"
 
-# Windows 10 CPE filters (explicit x64 variants)
-WINDOWS10_CPE_LIST: List[str] = [
-    "cpe:2.3:o:microsoft:windows_10_1607:-:*:*:*:*:*:x64:*",
-    "cpe:2.3:o:microsoft:windows_10_1709:-:*:*:*:*:*:x64:*",
-    "cpe:2.3:o:microsoft:windows_10_1909:-:*:*:*:*:*:x64:*",
-    "cpe:2.3:o:microsoft:windows_10:21h2:*:*:*:*:*:x64:*",
-    "cpe:2.3:o:microsoft:windows_10:22h2:*:*:*:*:*:x64:*",
-]
+COVERAGE_START  = dt.date(2025, 10, 14)
+COVERAGE_END    = dt.date.today()
 
-# Global publication window (inclusive, UTC dates)
-COVERAGE_START = dt.date(2025, 10, 14)
-COVERAGE_END = dt.date.today()
+OUTPUT_PATH     = os.path.join("data", "cve_windows10.json")
 
-# NVD impose une fenêtre max (120 jours) : on reste en dessous
-WINDOW_SLICE_DAYS = 90
+# CVE.org ne throttle pas agressivement, mais on reste poli
+DETAIL_SLEEP    = 0.3   # secondes entre chaque requete detail
 
-OUTPUT_PATH = os.path.join("data", "cve_windows10.json")
-
-# Optional: use NVD API key from env if available to improve rate limits
-NVD_API_KEY_ENV = "NVD_API_KEY"
-
-# Simple rate limit handling for 429 responses
-MAX_RETRIES_429 = 3
-RETRY_SLEEP_SECONDS = 5
-
-# Sleep entre requêtes d'enrichissement par cveId :
-# - Sans clé API : NVD autorise ~5 req/30s → 6.5s minimum
-# - Avec clé API : NVD autorise ~50 req/30s → 0.6s suffisant
-ENRICH_SLEEP_NO_KEY = 6.5
-ENRICH_SLEEP_WITH_KEY = 0.6
+# Mapping produit -> version courte
+VERSION_MAP: Dict[str, str] = {
+    "1507": "1507", "1511": "1511", "1607": "1607",
+    "1703": "1703", "1709": "1709", "1803": "1803",
+    "1809": "1809", "1903": "1903", "1909": "1909",
+    "2004": "2004", "20h2": "20H2", "21h2": "21H2", "22h2": "22H2",
+}
 
 
-# --- Data structures -------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
 
 @dataclass
 class SimpleCVE:
@@ -67,12 +61,14 @@ class SimpleCVE:
     cvss_score: Optional[float]
     cvss_severity: Optional[str]
     impact_type: Optional[str]
-    reference_url: str
-    summary: str
+    windows_10_versions: List[str] = field(default_factory=list)
+    reference_url: str = ""
+    summary: str = ""
 
 
-# --- Helpers ---------------------------------------------------------------
-
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def iso_date(d: dt.date) -> str:
     return d.isoformat()
@@ -82,131 +78,62 @@ def utc_now_iso() -> str:
     return dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 
-def build_nvd_params(
-    cpe_name: str,
-    start: Optional[dt.date] = None,
-    end: Optional[dt.date] = None,
-    start_index: int = 0,
-) -> Dict[str, Any]:
-    """Build query parameters for NVD CVE 2.0 API."""
-    params: Dict[str, Any] = {
-        "cpeName": cpe_name,
-        "startIndex": start_index,
-        "resultsPerPage": 200,
-    }
-
-    if start is not None and end is not None:
-        params["pubStartDate"] = f"{start.isoformat()}T00:00:00.000Z"
-        params["pubEndDate"] = f"{end.isoformat()}T23:59:59.000Z"
-
-    return params
-
-
-def get_nvd_headers() -> Dict[str, str]:
-    headers: Dict[str, str] = {"User-Agent": "win10-observatory-simple/1.0"}
-    api_key = os.getenv(NVD_API_KEY_ENV)
-    if api_key:
-        headers["apiKey"] = api_key
-    return headers
-
-
-def call_nvd_once(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Perform a single NVD request with given params.
-
-    Handles HTTP 429 with a small bounded backoff. Returns parsed JSON on 200,
-    None on repeated 429 or other HTTP/JSON errors.
-    """
-    headers = get_nvd_headers()
-
-    for attempt in range(1, MAX_RETRIES_429 + 1):
-        print(f"[DEBUG] NVD URL: {NVD_API_BASE} params={params} (attempt {attempt}/{MAX_RETRIES_429})")
-        try:
-            resp = requests.get(NVD_API_BASE, params=params, headers=headers, timeout=30)
-        except requests.RequestException as exc:
-            print(f"[ERROR] NVD request failed: {exc}", file=sys.stderr)
-            return None
-
-        if resp.status_code == 429:
-            print(
-                f"[WARN] NVD rate limit hit (429), backing off {RETRY_SLEEP_SECONDS}s before retry...",
-                file=sys.stderr,
-            )
-            if attempt == MAX_RETRIES_429:
-                print(
-                    "[WARN] NVD still returning 429 after max retries; skipping this window/CPE.",
-                    file=sys.stderr,
-                )
-                return None
-            time.sleep(RETRY_SLEEP_SECONDS)
+def parse_windows10_versions(affected: List[Dict[str, Any]]) -> List[str]:
+    """Extraire les versions Windows 10 depuis la liste affected de CVE.org."""
+    versions: List[str] = []
+    for entry in affected:
+        product = entry.get("product", "")
+        if "windows 10" not in product.lower():
             continue
-
-        if resp.status_code != 200:
-            snippet = resp.text[:200] if resp.text else ""
-            print(
-                f"[ERROR] NVD API returned status {resp.status_code}: {snippet}",
-                file=sys.stderr,
-            )
-            return None
-
-        try:
-            return resp.json()
-        except Exception as exc:
-            print(f"[ERROR] Failed to decode NVD response as JSON: {exc}", file=sys.stderr)
-            return None
-
-    return None
+        # Chercher un token de version connu dans le nom du produit
+        product_lower = product.lower()
+        for token, label in VERSION_MAP.items():
+            if token in product_lower:
+                if label not in versions:
+                    versions.append(label)
+                break
+    return sorted(versions)
 
 
-def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], Optional[str], Optional[str]]:
-    """Extract a CVSS base score, severity label, and a coarse impact type.
+def extract_cvss_from_cve_org(metrics: List[Dict[str, Any]]) -> tuple[
+    Optional[float], Optional[str], Optional[str]
+]:
+    """Extraire score, severite et impact depuis la liste metrics CVE.org.
 
-    Prioritises CVSS v3.1, then v3.0, then v2.
+    CVE.org place les metriques sous containers.cna.metrics[]
+    avec des cles cvssV3_1, cvssV3_0 ou cvssV2_0.
     """
     score: Optional[float] = None
     severity: Optional[str] = None
-    impact_type: Optional[str] = None
+    vector: Optional[str] = None
 
-    for key in ("cvssMetricV31", "cvssMetricV30"):
-        arr = metrics.get(key)
-        if not arr:
-            continue
-        first = arr[0]
-        cvss_data = first.get("cvssData", {})
-        score = cvss_data.get("baseScore")
-        severity = cvss_data.get("baseSeverity") or first.get("baseSeverity")
-        vector = (cvss_data.get("vectorString") or "").upper()
-        if "AV:N" in vector or "NETWORK" in vector:
+    for m in metrics:
+        for key in ("cvssV3_1", "cvssV3_0", "cvssV2_0"):
+            if key in m:
+                cvss = m[key]
+                score    = cvss.get("baseScore")
+                severity = cvss.get("baseSeverity")
+                vector   = (cvss.get("vectorString") or "").upper()
+                break
+        if score is not None:
+            break
+
+    impact_type: Optional[str] = None
+    if vector:
+        if "AV:N" in vector:
             impact_type = "RCE"
-        elif "PR:L" in vector or "PR:H" in vector:
+        elif "AV:L" in vector and ("PR:L" in vector or "PR:H" in vector):
             impact_type = "EoP"
         elif "C:H" in vector and "A:N" in vector:
             impact_type = "InfoLeak"
-        elif "A:H" in vector:
+        elif "A:H" in vector or "A:C" in vector:
             impact_type = "DoS"
-        break
-
-    if score is None:
-        arr_v2 = metrics.get("cvssMetricV2")
-        if arr_v2:
-            first_v2 = arr_v2[0]
-            cvss_data_v2 = first_v2.get("cvssData", {})
-            score = cvss_data_v2.get("baseScore")
-            severity = first_v2.get("baseSeverity") or severity
-            vector_v2 = (cvss_data_v2.get("vectorString") or "").upper()
-            if "AV:N" in vector_v2:
-                impact_type = impact_type or "RCE"
-            elif "PR:L" in vector_v2 or "PR:H" in vector_v2:
-                impact_type = impact_type or "EoP"
-            elif "C:C" in vector_v2 and "A:N" in vector_v2:
-                impact_type = impact_type or "InfoLeak"
-            elif "A:C" in vector_v2:
-                impact_type = impact_type or "DoS"
 
     return score, severity, impact_type
 
 
 def derive_impact_from_summary(summary: str) -> str:
-    """Dériver un impact_type à partir du texte du summary quand CVSS est absent."""
+    """Fallback : deriv impact_type depuis le texte du summary."""
     s = summary.lower()
     if "execute code" in s or "command injection" in s or "remote code execution" in s:
         return "RCE"
@@ -225,213 +152,183 @@ def derive_impact_from_summary(summary: str) -> str:
     return "unknown"
 
 
-def extract_summary(descriptions: List[Dict[str, Any]]) -> str:
-    if not descriptions:
-        return ""
-    for d in descriptions:
-        if d.get("lang") == "en" and d.get("value"):
-            return d["value"].strip()
-    for d in descriptions:
-        val = d.get("value")
-        if val:
-            return str(val).strip()
-    return ""
+# ---------------------------------------------------------------------------
+# CVE.org API calls
+# ---------------------------------------------------------------------------
 
+def fetch_cve_ids_from_cve_org(start: dt.date, end: dt.date) -> List[str]:
+    """Lister les CVE IDs Microsoft affectant Windows 10 sur la periode.
 
-def extract_reference_url(cve_id: str, refs: List[Dict[str, Any]]) -> str:
-    """Pick a reference URL if available, otherwise default to the NVD detail page."""
-    for ref in refs or []:
-        url = ref.get("url")
-        if url:
-            return str(url)
-    return f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+    CVE.org /api/cve-search accepte les parametres :
+      cna, startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), resultsPerPage.
+    On filtre cote client sur les produits contenant 'windows 10'.
+    """
+    params: Dict[str, Any] = {
+        "cna": "Microsoft Corporation",
+        "startDate": iso_date(start),
+        "endDate": iso_date(end),
+        "resultsPerPage": 2000,
+    }
+    print(f"[INFO] Recherche CVE.org : cna=Microsoft Corporation {iso_date(start)} -> {iso_date(end)}")
 
+    try:
+        resp = requests.get(CVE_ORG_SEARCH, params=params, timeout=60)
+    except requests.RequestException as exc:
+        print(f"[ERROR] CVE.org search failed: {exc}", file=sys.stderr)
+        return []
 
-def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
-    cves: List[SimpleCVE] = []
-    vulns = payload.get("vulnerabilities", [])
+    if resp.status_code != 200:
+        print(f"[ERROR] CVE.org search returned HTTP {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
+        return []
 
-    for v in vulns:
-        cve = v.get("cve", {})
-        cve_id = cve.get("id", "")
+    try:
+        data = resp.json()
+    except Exception as exc:
+        print(f"[ERROR] CVE.org search JSON decode failed: {exc}", file=sys.stderr)
+        return []
+
+    # La reponse peut etre une liste directe ou un objet avec une cle cveRecords/cves
+    records: List[Dict[str, Any]] = []
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict):
+        for key in ("cveRecords", "cves", "results", "data"):
+            if key in data and isinstance(data[key], list):
+                records = data[key]
+                break
+        if not records:
+            # Certaines versions de l'API retournent directement un dict de CVE
+            records = [data]
+
+    cve_ids: List[str] = []
+    for record in records:
+        # Deux formats possibles : {"cveId": ...} ou {"cveMetadata": {"cveId": ...}}
+        cve_id = (
+            record.get("cveId")
+            or (record.get("cveMetadata") or {}).get("cveId")
+        )
         if not cve_id:
             continue
 
-        published = cve.get("published", "")
-
-        # Les métriques CVSS sont sous cve["metrics"], pas v["metrics"]
-        metrics = cve.get("metrics", {}) or {}
-        score, severity, impact_type = extract_cvss_and_impact(metrics)
-
-        descriptions = cve.get("descriptions", [])
-        summary = extract_summary(descriptions)
-
-        # Si pas d'impact_type depuis CVSS, dériver depuis le summary
-        if not impact_type:
-            impact_type = derive_impact_from_summary(summary)
-
-        references = cve.get("references", [])
-        ref_url = extract_reference_url(cve_id, references)
-
-        cves.append(
-            SimpleCVE(
-                cve_id=cve_id,
-                published=published[:10] if published else "",
-                cvss_score=score,
-                cvss_severity=severity,
-                impact_type=impact_type,
-                reference_url=ref_url,
-                summary=summary,
-            )
+        # Filtrer sur les produits Windows 10
+        containers = record.get("containers", {})
+        cna = containers.get("cna", {})
+        affected = cna.get("affected", [])
+        has_win10 = any(
+            "windows 10" in (e.get("product") or "").lower()
+            for e in affected
         )
+        if has_win10:
+            cve_ids.append(cve_id)
 
+    print(f"[INFO] {len(cve_ids)} CVE Windows 10 identifies sur CVE.org (sur {len(records)} retournes par Microsoft)")
+    return cve_ids
+
+
+def fetch_cve_detail(cve_id: str) -> Optional[SimpleCVE]:
+    """Recuperer la fiche complete d'une CVE depuis CVE.org."""
+    url = CVE_ORG_DETAIL.format(cve_id=cve_id)
+    try:
+        resp = requests.get(url, timeout=15)
+    except requests.RequestException as exc:
+        print(f"[WARN] CVE.org detail fetch failed for {cve_id}: {exc}", file=sys.stderr)
+        return None
+
+    if resp.status_code == 404:
+        print(f"[WARN] {cve_id} not found on CVE.org (404)", file=sys.stderr)
+        return None
+
+    if resp.status_code != 200:
+        print(f"[WARN] CVE.org detail for {cve_id} returned HTTP {resp.status_code}", file=sys.stderr)
+        return None
+
+    try:
+        data = resp.json()
+    except Exception as exc:
+        print(f"[WARN] CVE.org detail JSON decode failed for {cve_id}: {exc}", file=sys.stderr)
+        return None
+
+    # Metadata
+    meta = data.get("cveMetadata", {})
+    published_raw = meta.get("datePublished") or meta.get("dateReserved") or ""
+    published = published_raw[:10] if published_raw else ""
+
+    # Container CNA (source Microsoft)
+    containers = data.get("containers", {})
+    cna = containers.get("cna", {})
+
+    # CVSS
+    metrics = cna.get("metrics", [])
+    score, severity, impact_type = extract_cvss_from_cve_org(metrics)
+
+    # Description
+    descriptions = cna.get("descriptions", [])
+    summary = ""
+    for d in descriptions:
+        if d.get("lang", "").startswith("en") and d.get("value"):
+            summary = d["value"].strip()
+            break
+    if not summary and descriptions:
+        summary = (descriptions[0].get("value") or "").strip()
+
+    # Fallback impact depuis le summary
+    if not impact_type:
+        impact_type = derive_impact_from_summary(summary)
+
+    # Versions Windows 10 affectees
+    affected = cna.get("affected", [])
+    windows_10_versions = parse_windows10_versions(affected)
+
+    # URL de reference
+    reference_url = f"https://www.cve.org/CVERecord?id={cve_id}"
+
+    return SimpleCVE(
+        cve_id=cve_id,
+        published=published,
+        cvss_score=score,
+        cvss_severity=severity,
+        impact_type=impact_type,
+        windows_10_versions=windows_10_versions,
+        reference_url=reference_url,
+        summary=summary,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Main fetch pipeline
+# ---------------------------------------------------------------------------
+
+def fetch_all_cves() -> List[SimpleCVE]:
+    """Pipeline complet : recherche CVE IDs puis enrichissement detail."""
+    cve_ids = fetch_cve_ids_from_cve_org(COVERAGE_START, COVERAGE_END)
+
+    if not cve_ids:
+        print("[WARN] Aucun CVE Windows 10 trouve sur CVE.org pour la periode.", file=sys.stderr)
+        return []
+
+    print(f"[INFO] Recuperation des details pour {len(cve_ids)} CVE...")
+    cves: List[SimpleCVE] = []
+    errors = 0
+
+    for i, cve_id in enumerate(cve_ids, 1):
+        cve = fetch_cve_detail(cve_id)
+        if cve:
+            cves.append(cve)
+        else:
+            errors += 1
+
+        if i % 50 == 0:
+            print(f"[INFO] Progression : {i}/{len(cve_ids)} traites, {len(cves)} ok, {errors} echecs")
+
+        time.sleep(DETAIL_SLEEP)
+
+    print(f"[INFO] Fetch termine : {len(cves)}/{len(cve_ids)} CVE recuperes ({errors} echecs)")
     return cves
 
 
-def enrich_cvss(cves: List[SimpleCVE]) -> None:
-    """Pour les CVE sans score CVSS, interroger NVD par cveId (sans filtre CPE).
-
-    La requête filtrée par cpeName ne retourne pas toujours le bloc metrics.
-    Une requête directe par cveId retourne la fiche complète avec les métriques.
-
-    Rate limit NVD :
-    - Sans clé API : ~5 req/30s → sleep 6.5s
-    - Avec clé API : ~50 req/30s → sleep 0.6s
-    """
-    to_enrich = [c for c in cves if c.cvss_score is None]
-    if not to_enrich:
-        print("[INFO] Toutes les CVE ont déjà un score CVSS, pas d'enrichissement nécessaire.")
-        return
-
-    api_key = os.getenv(NVD_API_KEY_ENV)
-    sleep_duration = ENRICH_SLEEP_WITH_KEY if api_key else ENRICH_SLEEP_NO_KEY
-    print(
-        f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score "
-        f"(sleep={sleep_duration}s, clé API={'oui' if api_key else 'non'})..."
-    )
-
-    enriched_count = 0
-    for c in to_enrich:
-        params = {"cveId": c.cve_id}
-        payload = call_nvd_once(params)
-        if not payload:
-            print(f"[WARN] Enrichissement échoué pour {c.cve_id} (NVD non disponible ou 429)", file=sys.stderr)
-            continue
-
-        vulns = payload.get("vulnerabilities", [])
-        if not vulns:
-            continue
-
-        cve_data = vulns[0].get("cve", {})
-        metrics = cve_data.get("metrics", {}) or {}
-
-        score, severity, impact_type = extract_cvss_and_impact(metrics)
-
-        if score is not None:
-            c.cvss_score = score
-            enriched_count += 1
-        if severity is not None:
-            c.cvss_severity = severity
-        if impact_type and (c.impact_type is None or c.impact_type == "unknown"):
-            c.impact_type = impact_type
-
-        # Si toujours pas d'impact_type, re-dériver depuis le summary enrichi
-        if not c.impact_type or c.impact_type == "unknown":
-            summary_enriched = extract_summary(cve_data.get("descriptions", []))
-            if summary_enriched:
-                c.summary = summary_enriched
-            c.impact_type = derive_impact_from_summary(c.summary)
-
-        time.sleep(sleep_duration)
-
-    print(f"[INFO] Enrichissement terminé : {enriched_count}/{len(to_enrich)} CVE ont reçu un score CVSS.")
-
-
-def iter_date_slices(start: dt.date, end: dt.date, slice_days: int) -> List[tuple[dt.date, dt.date]]:
-    slices: List[tuple[dt.date, dt.date]] = []
-    current = start
-    delta = dt.timedelta(days=slice_days)
-    while current <= end:
-        slice_start = current
-        slice_end = min(end, slice_start + delta)
-        slices.append((slice_start, slice_end))
-        current = slice_end + dt.timedelta(days=1)
-    return slices
-
-
-def fetch_cves_for_window(
-    cpe_name: str,
-    window_start: Optional[dt.date],
-    window_end: Optional[dt.date],
-) -> List[SimpleCVE]:
-    """Fetch CVE for a given CPE and date window, paginating as needed."""
-    all_cves: List[SimpleCVE] = []
-    start_index = 0
-    total_results: Optional[int] = None
-
-    while True:
-        params = build_nvd_params(cpe_name, window_start, window_end, start_index=start_index)
-        payload = call_nvd_once(params)
-        if payload is None:
-            break
-
-        if total_results is None:
-            total_results = payload.get("totalResults", 0)
-            print(f"[INFO] NVD reports totalResults={total_results} for this window and CPE {cpe_name}")
-
-        page_cves = parse_cves(payload)
-        all_cves.extend(page_cves)
-        print(
-            f"[INFO] Retrieved {len(page_cves)} CVE from this page, {len(all_cves)} total so far "
-            f"for CPE {cpe_name} in window."
-        )
-
-        results_per_page = payload.get("resultsPerPage", len(page_cves))
-        if results_per_page <= 0:
-            break
-
-        start_index += results_per_page
-        if total_results is not None and start_index >= total_results:
-            break
-
-        if start_index > 2000:
-            print(
-                "[WARN] Reached pagination safety limit (startIndex > 2000) for this window, stopping early.",
-                file=sys.stderr,
-            )
-            break
-
-    return all_cves
-
-
-def fetch_all_cves() -> List[SimpleCVE]:
-    """Fetch CVE for Windows 10 over the global coverage window and multiple CPEs."""
-    dedup: Dict[str, SimpleCVE] = {}
-
-    for cpe_name in WINDOWS10_CPE_LIST:
-        print(f"[INFO] Fetching for CPE {cpe_name}")
-
-        recent_end = COVERAGE_END
-        recent_start = max(COVERAGE_START, recent_end - dt.timedelta(days=30))
-        print(f"[INFO] Fetching sanity window {iso_date(recent_start)} -> {iso_date(recent_end)} for {cpe_name}")
-        sanity_cves = fetch_cves_for_window(cpe_name, recent_start, recent_end)
-        for c in sanity_cves:
-            dedup[c.cve_id] = c
-
-        print(
-            f"[INFO] Fetching full coverage window {iso_date(COVERAGE_START)} -> {iso_date(COVERAGE_END)} "
-            f"in slices of {WINDOW_SLICE_DAYS} days for {cpe_name}"
-        )
-        slices = iter_date_slices(COVERAGE_START, COVERAGE_END, WINDOW_SLICE_DAYS)
-        for slice_start, slice_end in slices:
-            print(f"[INFO] Fetching slice {iso_date(slice_start)} -> {iso_date(slice_end)} for {cpe_name}")
-            slice_cves = fetch_cves_for_window(cpe_name, slice_start, slice_end)
-            for c in slice_cves:
-                dedup[c.cve_id] = c
-
-    print(f"[INFO] Total unique CVE collected across all CPEs: {len(dedup)}")
-    return list(dedup.values())
-
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
 
 def ensure_output_dir(path: str) -> None:
     directory = os.path.dirname(path)
@@ -446,6 +343,7 @@ def write_output(cves: List[SimpleCVE]) -> None:
         "generated_at": utc_now_iso(),
         "coverage_start": iso_date(COVERAGE_START),
         "coverage_end": iso_date(COVERAGE_END),
+        "source": "CVE.org (MITRE)",
         "cves": [asdict(c) for c in sorted(cves, key=lambda c: c.cve_id)],
     }
 
@@ -457,19 +355,12 @@ def write_output(cves: List[SimpleCVE]) -> None:
 
 def main() -> None:
     print(
-        f"[INFO] Fetching Windows 10 CVE from NVD between {iso_date(COVERAGE_START)} and {iso_date(COVERAGE_END)} "
-        f"for CPE list of size {len(WINDOWS10_CPE_LIST)}"
+        f"[INFO] Fetching Windows 10 CVE from CVE.org between "
+        f"{iso_date(COVERAGE_START)} and {iso_date(COVERAGE_END)}"
     )
-
     cves = fetch_all_cves()
-
     if not cves:
-        print("[WARN] No CVE returned by NVD for the given filters.", file=sys.stderr)
-    else:
-        # Passe d'enrichissement CVSS : requête par cveId pour récupérer les métriques
-        # absentes de la réponse filtrée par CPE
-        enrich_cvss(cves)
-
+        print("[WARN] No CVE collected — check CVE.org availability.", file=sys.stderr)
     write_output(cves)
 
 
