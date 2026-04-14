@@ -174,7 +174,7 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
         first = arr[0]
         cvss_data = first.get("cvssData", {})
         score = cvss_data.get("baseScore")
-        severity = cvss_data.get("baseSeverity")
+        severity = cvss_data.get("baseSeverity") or first.get("baseSeverity")
         vector = (cvss_data.get("vectorString") or "").upper()
         # Very coarse classification based on typical patterns
         if "AV:N" in vector or "NETWORK" in vector:
@@ -206,6 +206,26 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
                 impact_type = impact_type or "DoS"
 
     return score, severity, impact_type
+
+
+def derive_impact_from_summary(summary: str) -> str:
+    """Dériver un impact_type à partir du texte du summary quand CVSS est absent."""
+    s = summary.lower()
+    if "execute code" in s or "command injection" in s or "remote code execution" in s:
+        return "RCE"
+    if "elevate privileges" in s or "elevation of privilege" in s:
+        return "EoP"
+    if "disclose information" in s or "information disclosure" in s:
+        return "InfoLeak"
+    if "deny service" in s or "denial of service" in s:
+        return "DoS"
+    if "spoofing" in s:
+        return "Spoofing"
+    if "bypass" in s or "security feature" in s:
+        return "SFB"
+    if "tampering" in s:
+        return "Tampering"
+    return "unknown"
 
 
 def extract_summary(descriptions: List[Dict[str, Any]]) -> str:
@@ -244,14 +264,16 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
 
         published = cve.get("published", "")
 
+        # Les métriques CVSS sont sous cve["metrics"], pas v["metrics"]
         metrics = cve.get("metrics", {}) or {}
-        # Debug simple pour vérifier la présence de métriques
-        # (peut être activé ponctuellement si nécessaire)
-        # print("DEBUG metrics keys for", cve_id, ":", list(metrics.keys()))
         score, severity, impact_type = extract_cvss_and_impact(metrics)
 
         descriptions = cve.get("descriptions", [])
         summary = extract_summary(descriptions)
+
+        # Si pas d'impact_type depuis CVSS, dériver depuis le summary
+        if not impact_type:
+            impact_type = derive_impact_from_summary(summary)
 
         references = cve.get("references", [])
         ref_url = extract_reference_url(cve_id, references)
@@ -269,6 +291,56 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
         )
 
     return cves
+
+
+def enrich_cvss(cves: List[SimpleCVE]) -> None:
+    """Pour les CVE sans score CVSS, interroger NVD par cveId (sans filtre CPE).
+
+    La requête filtrée par cpeName ne retourne pas toujours le bloc metrics.
+    Une requête directe par cveId retourne la fiche complète avec les métriques.
+    """
+    to_enrich = [c for c in cves if c.cvss_score is None]
+    if not to_enrich:
+        print("[INFO] Toutes les CVE ont déjà un score CVSS, pas d'enrichissement nécessaire.")
+        return
+
+    print(f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score (requête par cveId)...")
+
+    enriched_count = 0
+    for c in to_enrich:
+        params = {"cveId": c.cve_id}
+        payload = call_nvd_once(params)
+        if not payload:
+            continue
+        vulns = payload.get("vulnerabilities", [])
+        if not vulns:
+            continue
+
+        cve_data = vulns[0].get("cve", {})
+        metrics = cve_data.get("metrics", {}) or {}
+
+        score, severity, impact_type = extract_cvss_and_impact(metrics)
+
+        if score is not None:
+            c.cvss_score = score
+            enriched_count += 1
+        if severity is not None:
+            c.cvss_severity = severity
+        # Mettre à jour impact_type seulement si on a une meilleure valeur
+        if impact_type and (c.impact_type is None or c.impact_type == "unknown"):
+            c.impact_type = impact_type
+
+        # Si toujours pas d'impact_type, re-dériver depuis le summary enrichi
+        if not c.impact_type or c.impact_type == "unknown":
+            summary_enriched = extract_summary(cve_data.get("descriptions", []))
+            if summary_enriched:
+                c.summary = summary_enriched
+            c.impact_type = derive_impact_from_summary(c.summary)
+
+        # Respecter le rate limit NVD (max ~50 req/30s sans clé API)
+        time.sleep(0.6)
+
+    print(f"[INFO] Enrichissement terminé : {enriched_count}/{len(to_enrich)} CVE ont reçu un score CVSS.")
 
 
 def iter_date_slices(start: dt.date, end: dt.date, slice_days: int) -> List[tuple[dt.date, dt.date]]:
@@ -402,6 +474,10 @@ def main() -> None:
 
     if not cves:
         print("[WARN] No CVE returned by NVD for the given filters.", file=sys.stderr)
+    else:
+        # Passe d'enrichissement CVSS pour les CVE sans score
+        # (la requête filtrée par CPE ne retourne pas toujours le bloc metrics)
+        enrich_cvss(cves)
 
     write_output(cves)
 
