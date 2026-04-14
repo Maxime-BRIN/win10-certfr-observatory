@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
 """Build frontend-compatible dataset from NVD Windows 10 CVE data.
 
-This script reads data/cve_windows10.json (NVD-oriented schema) and
-produces data/windows-10-cve-data.json matching the frontend schema
-expected by index.html.
-
-Mapping rules:
-- cve_id              <- cve_id
-- published_at        <- published
-- cvss_base_score     <- cvss_score  (float or null)
-- cvss_severity       <- cvss_severity (str or null: CRITICAL/HIGH/MEDIUM/LOW/NONE)
-- exploitation_status <- "unknown"
-- impact_type         <- impact_type
-- windows_10_versions <- derived from the CPE variants we query
-- reference_url       <- reference_url (NVD URL or first available reference)
-
-The script does *not* modify data/cve_windows10.json.
+Handles both the old schema (cvss_base_score, certfr_url, certfr_id)
+and the new schema (cvss_score, cvss_severity, published, reference_url)
+so a mixed cve_windows10.json is gracefully normalised.
 """
 
 from __future__ import annotations
@@ -25,7 +13,6 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Paths
 ROOT_DIR = Path(__file__).resolve().parents[1]
 NVD_INPUT_PATH = ROOT_DIR / "data" / "cve_windows10.json"
 FRONTEND_OUTPUT_PATH = ROOT_DIR / "data" / "windows-10-cve-data.json"
@@ -43,21 +30,7 @@ class FrontendCVE:
     reference_url: str
 
 
-def load_nvd_dataset() -> Dict[str, Any]:
-    if not NVD_INPUT_PATH.is_file():
-        raise FileNotFoundError(f"NVD input dataset not found: {NVD_INPUT_PATH}")
-    with NVD_INPUT_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
 def normalise_severity(score: Optional[float], raw_severity: Optional[str]) -> Optional[str]:
-    """Return a canonical CVSS v3 severity label.
-
-    Priority:
-    1. Use raw_severity from NVD if it is a known label.
-    2. Derive from score using official CVSS v3 thresholds.
-    3. Return None if neither is available.
-    """
     known = {"NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
     if raw_severity and raw_severity.upper() in known:
         return raw_severity.upper()
@@ -74,51 +47,73 @@ def normalise_severity(score: Optional[float], raw_severity: Optional[str]) -> O
     return "CRITICAL"
 
 
+def load_nvd_dataset() -> Dict[str, Any]:
+    if not NVD_INPUT_PATH.is_file():
+        raise FileNotFoundError(f"NVD input dataset not found: {NVD_INPUT_PATH}")
+    with NVD_INPUT_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
-    coverage_start = nvd_data["coverage_start"]
-    coverage_end = nvd_data["coverage_end"]
+    # Support both top-level schema variants
+    coverage_start = nvd_data.get("coverage_start") or nvd_data.get("dataset", {}).get("coverage_start", "")
+    coverage_end = nvd_data.get("coverage_end") or nvd_data.get("dataset", {}).get("coverage_end", "")
     raw_cves = nvd_data.get("cves", [])
 
+    seen: set = set()
     frontend_cves: List[FrontendCVE] = []
 
     for item in raw_cves:
         cve_id = item.get("cve_id")
-        if not cve_id:
+        if not cve_id or cve_id in seen:
             continue
+        seen.add(cve_id)
 
-        published = item.get("published") or ""
+        # --- Normalise published date ---
+        # New schema: "published" (ISO datetime or date)
+        # Old schema: "published_at" (date string)
+        published_raw = item.get("published") or item.get("published_at") or ""
+        published = published_raw[:10] if published_raw else ""
 
-        # cvss_score is the canonical field written by fetch_cve_windows10.py
-        raw_score = item.get("cvss_score")
+        # --- Normalise CVSS score ---
+        # New schema: "cvss_score"
+        # Old schema: "cvss_base_score"
+        raw_score = item.get("cvss_score") if item.get("cvss_score") is not None else item.get("cvss_base_score")
         try:
             cvss_base = float(raw_score) if raw_score is not None else None
         except (TypeError, ValueError):
             cvss_base = None
 
+        # --- Normalise severity ---
         raw_severity = item.get("cvss_severity")
         cvss_severity = normalise_severity(cvss_base, raw_severity)
 
+        # --- Normalise impact type ---
         impact_type = item.get("impact_type") or "unknown"
 
+        # --- Normalise reference URL ---
+        # New schema: "reference_url"
+        # Old schema: "certfr_url" (often empty)
         reference_url = (
             item.get("reference_url")
+            or item.get("certfr_url")
             or f"https://nvd.nist.gov/vuln/detail/{cve_id}"
         )
+        if not reference_url:
+            reference_url = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
 
         windows_versions = ["1607", "1709", "1909", "21H2", "22H2"]
 
-        frontend_cves.append(
-            FrontendCVE(
-                cve_id=cve_id,
-                published_at=published,
-                cvss_base_score=cvss_base,
-                cvss_severity=cvss_severity,
-                exploitation_status="unknown",
-                impact_type=impact_type,
-                windows_10_versions=windows_versions,
-                reference_url=reference_url,
-            )
-        )
+        frontend_cves.append(FrontendCVE(
+            cve_id=cve_id,
+            published_at=published,
+            cvss_base_score=cvss_base,
+            cvss_severity=cvss_severity,
+            exploitation_status="unknown",
+            impact_type=impact_type,
+            windows_10_versions=windows_versions,
+            reference_url=reference_url,
+        ))
 
     return {
         "dataset": {
@@ -129,24 +124,20 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def ensure_output_dir(path: Path) -> None:
-    if not path.parent.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-
 def main() -> None:
     nvd_data = load_nvd_dataset()
     frontend_data = build_frontend_dataset(nvd_data)
 
-    ensure_output_dir(FRONTEND_OUTPUT_PATH)
+    FRONTEND_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with FRONTEND_OUTPUT_PATH.open("w", encoding="utf-8") as f:
         json.dump(frontend_data, f, ensure_ascii=False, indent=2)
 
     total = len(frontend_data["cves"])
     with_score = sum(1 for c in frontend_data["cves"] if c["cvss_base_score"] is not None)
+    without_score = total - with_score
     print(
-        f"[INFO] Built frontend dataset: {total} CVE entries "
-        f"({with_score} with CVSS score) → {FRONTEND_OUTPUT_PATH}"
+        f"[INFO] Built frontend dataset: {total} CVE "
+        f"({with_score} with CVSS score, {without_score} without) → {FRONTEND_OUTPUT_PATH}"
     )
 
 

@@ -8,6 +8,7 @@ on:
 jobs:
   fetch-nvd-windows10-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -26,10 +27,14 @@ jobs:
       - name: Fetch Windows 10 CVE from NVD
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          # SKIP_ENRICH=true désactive l'enrichissement CVSS par cveId
+          # (trop lent sans clé API : 6.5s × N CVE).
+          # Pour activer l'enrichissement complet, ajouter NVD_API_KEY dans les secrets.
+          SKIP_ENRICH: ${{ secrets.NVD_API_KEY == '' && 'true' || 'false' }}
         run: |
           python tools/fetch_cve_windows10.py
 
-      - name: Build frontend dataset (CERT-FR compatible JSON)
+      - name: Build frontend dataset
         run: |
           python tools/build_windows10_frontend_data.py
 
@@ -46,7 +51,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json || true
           if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -54,7 +58,7 @@ jobs:
             git checkout main
             git reset --hard origin/main
             git add data/cve_windows10.json data/windows-10-cve-data.json
-            git commit -m "chore: update NVD Windows 10 datasets" || echo "Nothing to commit"
+            git commit -m "chore: update NVD Windows 10 datasets"
             git push origin main
           else
             echo "No changes in datasets, nothing to commit."
