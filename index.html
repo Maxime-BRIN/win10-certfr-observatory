@@ -286,12 +286,6 @@
       background: #fef2f2;
     }
 
-    .tag-exploited {
-      border-color: rgba(22, 163, 74, 0.7);
-      color: #166534;
-      background: #ecfdf3;
-    }
-
     .footer-meta {
       margin-top: 0.4rem;
       font-size: 0.75rem;
@@ -339,7 +333,7 @@
     .nvd-sev-high     { background: #dc2626; }
     .nvd-sev-critical { background: #7c3aed; }
 
-    /* Badge de chargement pour le score */
+    /* Badge de chargement */
     .score-loading {
       font-size: 0.72rem;
       color: var(--muted);
@@ -367,6 +361,50 @@
     .refs-sep {
       color: var(--muted);
       font-size: 0.72rem;
+    }
+
+    /* ── Badges vecteur CVSS ─────────────────────────────── */
+    .vector-cell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      align-items: center;
+    }
+
+    /* Puce générique */
+    .vec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.15rem 0.42rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    /* Attack Vector */
+    .vec-av-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* Network  – rouge */
+    .vec-av-a  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; } /* Adjacent – orange */
+    .vec-av-l  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* Local    – vert */
+    .vec-av-p  { background: #f5f3ff; color: #5b21b6; border: 1px solid #c4b5fd; } /* Physical – violet */
+
+    /* Privileges Required */
+    .vec-pr-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* None – rouge */
+    .vec-pr-l  { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Low  – jaune */
+    .vec-pr-h  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* High – vert */
+
+    /* User Interaction */
+    .vec-ui-n  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; } /* None     – rouge */
+    .vec-ui-r  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; } /* Required – vert */
+
+    /* Fallback si vecteur non dispo */
+    .vec-unknown {
+      background: #f3f4f6;
+      color: var(--muted);
+      border: 1px solid var(--border-subtle);
+      font-style: italic;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -406,9 +444,9 @@
               <div class="kpi-meta">Gravité élevée et critique (NVD)</div>
             </div>
             <div class="kpi">
-              <div class="kpi-label">CVE avec exploitation ou PoC</div>
-              <div class="kpi-value" id="kpi-exploited-cves">0</div>
-              <div class="kpi-meta">Champ reconstruit (statut générique pour l'instant)</div>
+              <div class="kpi-label">CVE réseau (AV:N)</div>
+              <div class="kpi-value" id="kpi-network-cves">0</div>
+              <div class="kpi-meta">Exploitables à distance sans accès local</div>
             </div>
           </div>
           <div id="kpi-alert" class="alert" style="display:none;">
@@ -438,8 +476,8 @@
               <span>CVSS ≥ 8</span>
             </label>
             <label>
-              <input type="checkbox" id="filter-exploited" />
-              <span>Exploitées / PoC</span>
+              <input type="checkbox" id="filter-network" />
+              <span>Réseau uniquement (AV:N)</span>
             </label>
             <label>
               Score CVSS
@@ -459,6 +497,7 @@
                 <th>Date</th>
                 <th>Score</th>
                 <th>Type d'impact</th>
+                <th title="Attack Vector · Privileges Required · User Interaction (CVSS v3)">Vecteur CVSS</th>
                 <th>Versions Windows 10</th>
                 <th>Références supplémentaires</th>
               </tr>
@@ -476,16 +515,14 @@
     const FALLBACK_DATA_URL = "./data/windows-10-cve-sample-data.json";
     const NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=";
 
-    // Cache local des scores NVD pour éviter les appels redondants
-    const nvdScoreCache = new Map();
+    // Cache local : score + vecteur CVSS
+    const nvdCache = new Map(); // cveId → { score, vector }
 
     let allCves = [];
     let chartInstance = null;
 
     /**
      * Retourne la sévérité CVSS v3 et la classe CSS associée.
-     * Seuils officiels NVD : None 0.0, Low 0.1–3.9, Medium 4.0–6.9,
-     *                        High 7.0–8.9, Critical 9.0–10.0
      */
     function cvssInfo(score) {
       if (score === null || score === undefined || Number.isNaN(score)) {
@@ -500,7 +537,6 @@
 
     /**
      * Construit le badge NVD coloré (score + sévérité).
-     * Cliquable vers la fiche NVD.
      */
     function buildNvdBadge(cveId, score) {
       const nvdUrl = `https://nvd.nist.gov/vuln/detail/${cveId}`;
@@ -517,41 +553,90 @@
     }
 
     /**
-     * Récupère le CVSS base score depuis l'API NVD v2 pour une CVE donnée.
-     * Retourne null si introuvable ou en cas d'erreur.
-     * Utilise un cache pour ne pas re-fetcher.
+     * Parse un vecteur CVSS v3 (ex: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
+     * et retourne { av, pr, ui } ou null si non parseable.
      */
-    async function fetchNvdScore(cveId) {
-      if (nvdScoreCache.has(cveId)) return nvdScoreCache.get(cveId);
+    function parseCvssVector(vectorString) {
+      if (!vectorString) return null;
+      const map = {};
+      for (const part of vectorString.split("/")) {
+        const [k, v] = part.split(":");
+        if (k && v) map[k.toUpperCase()] = v.toUpperCase();
+      }
+      if (!map["AV"]) return null;
+      return { av: map["AV"], pr: map["PR"] || null, ui: map["UI"] || null };
+    }
+
+    /**
+     * Construit le HTML des badges vecteur CVSS pour la colonne dédiée.
+     * Affiche AV (Attack Vector), PR (Privileges Required), UI (User Interaction).
+     */
+    function buildVectorBadges(vectorString) {
+      const parsed = parseCvssVector(vectorString);
+      if (!parsed) {
+        return `<span class="vec-badge vec-unknown">–</span>`;
+      }
+
+      const avLabels = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
+      const avClasses = { N: "vec-av-n", A: "vec-av-a", L: "vec-av-l", P: "vec-av-p" };
+
+      const prLabels = { N: "PR: None", L: "PR: Low", H: "PR: High" };
+      const prClasses = { N: "vec-pr-n", L: "vec-pr-l", H: "vec-pr-h" };
+
+      const uiLabels = { N: "UI: None", R: "UI: Required" };
+      const uiClasses = { N: "vec-ui-n", R: "vec-ui-r" };
+
+      const avHtml = `<span class="vec-badge ${avClasses[parsed.av] || 'vec-unknown'}"
+        title="Attack Vector: ${avLabels[parsed.av] || parsed.av}">${avLabels[parsed.av] || parsed.av}</span>`;
+
+      const prHtml = parsed.pr
+        ? `<span class="vec-badge ${prClasses[parsed.pr] || 'vec-unknown'}"
+            title="Privileges Required: ${parsed.pr}">${prLabels[parsed.pr] || 'PR:' + parsed.pr}</span>`
+        : "";
+
+      const uiHtml = parsed.ui
+        ? `<span class="vec-badge ${uiClasses[parsed.ui] || 'vec-unknown'}"
+            title="User Interaction: ${parsed.ui}">${uiLabels[parsed.ui] || 'UI:' + parsed.ui}</span>`
+        : "";
+
+      return `<div class="vector-cell">${avHtml}${prHtml}${uiHtml}</div>`;
+    }
+
+    /**
+     * Récupère depuis l'API NVD : score CVSS + vecteur CVSS pour une CVE.
+     * Met en cache le résultat { score, vector }.
+     */
+    async function fetchNvdData(cveId) {
+      if (nvdCache.has(cveId)) return nvdCache.get(cveId);
       try {
         const res = await fetch(`${NVD_API_BASE}${cveId}`, {
           headers: { "Accept": "application/json" }
         });
-        if (!res.ok) {
-          nvdScoreCache.set(cveId, null);
-          return null;
-        }
+        if (!res.ok) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
         const json = await res.json();
         const vuln = json?.vulnerabilities?.[0]?.cve;
-        if (!vuln) { nvdScoreCache.set(cveId, null); return null; }
+        if (!vuln) { nvdCache.set(cveId, { score: null, vector: null }); return nvdCache.get(cveId); }
 
-        // Priorité : CVSS v3.1 > v3.0 > v2
         const metrics = vuln.metrics || {};
         let score = null;
+        let vector = null;
 
         if (metrics.cvssMetricV31?.length) {
-          score = metrics.cvssMetricV31[0].cvssData?.baseScore ?? null;
+          score  = metrics.cvssMetricV31[0].cvssData?.baseScore ?? null;
+          vector = metrics.cvssMetricV31[0].cvssData?.vectorString ?? null;
         } else if (metrics.cvssMetricV30?.length) {
-          score = metrics.cvssMetricV30[0].cvssData?.baseScore ?? null;
+          score  = metrics.cvssMetricV30[0].cvssData?.baseScore ?? null;
+          vector = metrics.cvssMetricV30[0].cvssData?.vectorString ?? null;
         } else if (metrics.cvssMetricV2?.length) {
-          score = metrics.cvssMetricV2[0].cvssData?.baseScore ?? null;
+          score  = metrics.cvssMetricV2[0].cvssData?.baseScore ?? null;
+          vector = metrics.cvssMetricV2[0].cvssData?.vectorString ?? null;
         }
 
-        nvdScoreCache.set(cveId, score);
-        return score;
+        nvdCache.set(cveId, { score, vector });
+        return nvdCache.get(cveId);
       } catch {
-        nvdScoreCache.set(cveId, null);
-        return null;
+        nvdCache.set(cveId, { score: null, vector: null });
+        return nvdCache.get(cveId);
       }
     }
 
@@ -588,12 +673,15 @@
         return !Number.isNaN(score) && score >= 8;
       }).length;
 
-      const exploited = cves.filter((c) => {
-        const status = (c.exploitation_status || "").toLowerCase();
-        return status === "exploited" || status === "poc";
+      // CVE réseau : AV:N dans le vecteur mis en cache (après fetch async)
+      // On recalcule après les fetches ; ici on initialise à 0
+      const networkCount = cves.filter((c) => {
+        if (!c._cvss_vector) return false;
+        const p = parseCvssVector(c._cvss_vector);
+        return p && p.av === "N";
       }).length;
 
-      return { total, critical, exploited, isSample,
+      return { total, critical, networkCount, isSample,
         coverageStart: datasetMeta?.coverage_start,
         coverageEnd: datasetMeta?.coverage_end };
     }
@@ -601,7 +689,7 @@
     function renderKpis(kpis, datasetMeta) {
       document.getElementById("kpi-total-cves").textContent = kpis.total;
       document.getElementById("kpi-critical-cves").textContent = kpis.critical;
-      document.getElementById("kpi-exploited-cves").textContent = kpis.exploited;
+      document.getElementById("kpi-network-cves").textContent = kpis.networkCount;
 
       const metaEl = document.getElementById("dataset-meta");
       if (datasetMeta && datasetMeta.coverage_start && datasetMeta.coverage_end) {
@@ -671,7 +759,7 @@
       tbody.innerHTML = "";
 
       const filterCritical = document.getElementById("filter-critical").checked;
-      const filterExploited = document.getElementById("filter-exploited").checked;
+      const filterNetwork  = document.getElementById("filter-network").checked;
       const sortCvss = document.getElementById("sort-cvss").value;
 
       let filtered = [...cves];
@@ -683,10 +771,11 @@
         });
       }
 
-      if (filterExploited) {
+      if (filterNetwork) {
         filtered = filtered.filter((c) => {
-          const status = (c.exploitation_status || "").toLowerCase();
-          return status === "exploited" || status === "poc";
+          if (!c._cvss_vector) return false;
+          const p = parseCvssVector(c._cvss_vector);
+          return p && p.av === "N";
         });
       }
 
@@ -706,7 +795,6 @@
 
         const nvdUrl = `https://nvd.nist.gov/vuln/detail/${c.cve_id}`;
 
-        // Colonne Score : badge NVD (score depuis JSON ou chargement async)
         const jsonScore = typeof c.cvss_base_score === "number"
           ? c.cvss_base_score
           : (c.cvss_base_score !== null && c.cvss_base_score !== undefined
@@ -714,13 +802,12 @@
             : null);
         const hasJsonScore = jsonScore !== null && !Number.isNaN(jsonScore);
 
-        // Colonne Références : uniquement le lien NVD + CERTFR si dispo
         const certfrPart = c.certfr_url
           ? `<span class="refs-sep">·</span><a href="${c.certfr_url}" target="_blank" rel="noopener noreferrer">${c.certfr_id || "CERTFR"}</a>`
           : "";
 
-        const status = (c.exploitation_status || "").toLowerCase();
-        const isExploited = status === "exploited" || status === "poc";
+        // Vecteur CVSS déjà en cache ?
+        const cachedVector = c._cvss_vector || null;
 
         tr.innerHTML = `
           <td class="cve-id">${c.cve_id}</td>
@@ -730,8 +817,15 @@
               ? buildNvdBadge(c.cve_id, jsonScore)
               : `<span class="score-loading">…</span>`
             }
+            ${hasJsonScore && jsonScore >= 8
+              ? `<br><span class="tag tag-critical">CVSS ≥ 8</span>`
+              : ""}
           </td>
           <td>${c.impact_type || ""}</td>
+          <td class="vector-cell-td">${cachedVector
+            ? buildVectorBadges(cachedVector)
+            : `<span class="score-loading">…</span>`
+          }</td>
           <td>${(c.windows_10_versions || []).join(", ")}</td>
           <td>
             <div class="refs-cell">
@@ -743,43 +837,49 @@
 
         tbody.appendChild(tr);
 
-        // Si le score est null dans le JSON, on le récupère depuis l'API NVD
-        if (!hasJsonScore) {
-          const scoreCell = tr.querySelector(".score-cell");
-          fetchNvdScore(c.cve_id).then((score) => {
-            // Mettre à jour l'objet CVE pour les filtres/tris futurs
-            c.cvss_base_score = score;
-            // Mettre à jour la cellule dans le DOM
-            if (score !== null && !Number.isNaN(score)) {
-              scoreCell.innerHTML = buildNvdBadge(c.cve_id, score);
-              // Tag critique si score >= 8
-              if (score >= 8) {
-                const tag = document.createElement("span");
-                tag.className = "tag tag-critical";
-                tag.textContent = "CVSS ≥ 8";
-                scoreCell.appendChild(document.createElement("br"));
-                scoreCell.appendChild(tag);
-              }
-            } else {
-              scoreCell.innerHTML = buildNvdBadge(c.cve_id, null);
+        // Fetch async si score ou vecteur manquant
+        if (!hasJsonScore || !cachedVector) {
+          const scoreCell  = tr.querySelector(".score-cell");
+          const vectorCell = tr.querySelector(".vector-cell-td");
+
+          fetchNvdData(c.cve_id).then(({ score, vector }) => {
+            // Stocker sur l'objet pour filtres/tris futurs
+            if (score !== null)  c.cvss_base_score = score;
+            if (vector !== null) c._cvss_vector     = vector;
+
+            // Mettre à jour le score si manquant
+            if (!hasJsonScore && score !== null && !Number.isNaN(score)) {
+              let html = buildNvdBadge(c.cve_id, score);
+              if (score >= 8) html += `<br><span class="tag tag-critical">CVSS ≥ 8</span>`;
+              scoreCell.innerHTML = html;
             }
+
+            // Mettre à jour le vecteur
+            if (vector !== null) {
+              vectorCell.innerHTML = buildVectorBadges(vector);
+            } else {
+              vectorCell.innerHTML = `<span class="vec-badge vec-unknown">–</span>`;
+            }
+
+            // Recalculer le KPI réseau une fois tous les vecteurs récupérés
+            updateNetworkKpi();
           });
-        } else {
-          // Tag critique si score >= 8 (score JSON disponible)
-          if (jsonScore >= 8 || isExploited) {
-            const scoreCell = tr.querySelector(".score-cell");
-            const tag = document.createElement("span");
-            tag.className = "tag" + (jsonScore >= 8 ? " tag-critical" : " tag-exploited");
-            tag.textContent = jsonScore >= 8 ? "CVSS ≥ 8" : "Exploité / PoC";
-            scoreCell.appendChild(document.createElement("br"));
-            scoreCell.appendChild(tag);
-          }
         }
       }
 
       if (footnote) {
         footnote.textContent = `${filtered.length} entrée(s) sur ${cves.length} au total (après filtres éventuels).`;
       }
+    }
+
+    /** Recalcule et met à jour le KPI "CVE réseau (AV:N)" */
+    function updateNetworkKpi() {
+      const count = allCves.filter((c) => {
+        const p = parseCvssVector(c._cvss_vector || "");
+        return p && p.av === "N";
+      }).length;
+      const el = document.getElementById("kpi-network-cves");
+      if (el) el.textContent = count;
     }
 
     async function bootstrap() {
@@ -794,8 +894,8 @@
       renderTable(cves);
 
       document.getElementById("filter-critical").addEventListener("change", () => renderTable(allCves));
-      document.getElementById("filter-exploited").addEventListener("change", () => renderTable(allCves));
-      document.getElementById("sort-cvss").addEventListener("change", () => renderTable(allCves));
+      document.getElementById("filter-network").addEventListener("change",  () => renderTable(allCves));
+      document.getElementById("sort-cvss").addEventListener("change",       () => renderTable(allCves));
     }
 
     bootstrap();
