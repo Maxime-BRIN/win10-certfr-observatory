@@ -69,10 +69,8 @@
     .sort-select:hover,.sort-select:focus { border-color:var(--accent); outline:none; }
     .table-wrapper { overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font-size:.78rem; }
-    /* ── En-tête ── */
     thead tr { background:rgba(0,122,204,0.055); border-bottom:2px solid rgba(0,122,204,0.18); }
     th { padding:.55rem .65rem; text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#4a6a84; white-space:nowrap; }
-    /* ── Lignes ── */
     td { padding:.5rem .65rem; border-bottom:1px solid var(--border); vertical-align:middle; }
     tbody tr:nth-child(even) { background:rgba(0,122,204,0.028); }
     tbody tr:nth-child(odd)  { background:#ffffff; }
@@ -244,8 +242,8 @@
   let pageSize          = 15;
 
   /* ── Field normalisation ───────────────────────────────
-     Accepts BOTH old schema (_cvss_vector, cvss_base_score, published_at)
-     AND new schema (cvss_vector_string, cvss_score, published).
+     Accepts both old schema (cvss_base_score, published_at)
+     and new schema (cvss_score, cvss_vector_string, published).
   ───────────────────────────────────────────────────────── */
   function normalizeCve(c) {
     if (c.cvss_base_score == null && c.cvss_score != null)
@@ -254,8 +252,6 @@
       c._cvss_vector = c.cvss_vector_string;
     if (!c.published_at && c.published)
       c.published_at = c.published;
-    c._ref_url   = c.reference_url || c.certfr_url || null;
-    c._ref_label = c.certfr_id || (c._ref_url ? "Réf. " + c.cve_id : null);
     return c;
   }
 
@@ -482,8 +478,9 @@
       const jScore=typeof c.cvss_base_score==="number"?c.cvss_base_score:parseFloat(c.cvss_base_score);
       const hasScore=!isNaN(jScore)&&c.cvss_base_score!=null;
       const hasVector=!!c._cvss_vector;
-      const refPart=c._ref_url
-        ?`<span class="refs-sep">·</span><a href="${c._ref_url}" target="_blank" rel="noopener noreferrer">${c._ref_label||"Réf. " + c.cve_id}</a>`:""
+      const refPart = c.reference_url && c.reference_url !== nvdUrl
+        ? `<span class="refs-sep">·</span><a href="${c.reference_url}" target="_blank" rel="noopener noreferrer">Réf. ↗</a>`
+        : "";
       tr.innerHTML=`
         <td class="cve-id">${c.cve_id}</td>
         <td class="date-cell">${c.published_at||"–"}</td>
