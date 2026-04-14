@@ -244,7 +244,10 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
 
         published = cve.get("published", "")
 
-        metrics = v.get("metrics", {})
+        metrics = cve.get("metrics", {}) or {}
+        # Debug simple pour vérifier la présence de métriques
+        # (peut être activé ponctuellement si nécessaire)
+        # print("DEBUG metrics keys for", cve_id, ":", list(metrics.keys()))
         score, severity, impact_type = extract_cvss_and_impact(metrics)
 
         descriptions = cve.get("descriptions", [])
