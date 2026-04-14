@@ -58,6 +58,7 @@ class SimpleCVE:
     published: str
     cvss_score: Optional[float]
     cvss_severity: Optional[str]
+    cvss_vector_string: Optional[str]   # <-- nouveau : vectorString CVSS v3 (ou v2)
     impact_type: Optional[str]
     reference_url: str
     summary: str
@@ -119,10 +120,14 @@ def call_nvd_once(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             return None
     return None
 
-def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], Optional[str], Optional[str]]:
+def extract_cvss_and_impact(
+    metrics: Dict[str, Any],
+) -> tuple[Optional[float], Optional[str], Optional[str], Optional[str]]:
+    """Retourne (score, severity, impact_type, vector_string)."""
     score: Optional[float] = None
     severity: Optional[str] = None
     impact_type: Optional[str] = None
+    vector_string: Optional[str] = None
 
     for key in ("cvssMetricV31", "cvssMetricV30"):
         arr = metrics.get(key)
@@ -132,7 +137,8 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
         cvss_data = first.get("cvssData", {})
         score = cvss_data.get("baseScore")
         severity = cvss_data.get("baseSeverity") or first.get("baseSeverity")
-        vector = (cvss_data.get("vectorString") or "").upper()
+        vector_string = cvss_data.get("vectorString") or None
+        vector = (vector_string or "").upper()
         if "AV:N" in vector or "NETWORK" in vector:
             impact_type = "RCE"
         elif "PR:L" in vector or "PR:H" in vector:
@@ -150,6 +156,7 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
             cvss_data_v2 = first_v2.get("cvssData", {})
             score = cvss_data_v2.get("baseScore")
             severity = first_v2.get("baseSeverity") or severity
+            vector_string = vector_string or cvss_data_v2.get("vectorString") or None
             vector_v2 = (cvss_data_v2.get("vectorString") or "").upper()
             if "AV:N" in vector_v2:
                 impact_type = impact_type or "RCE"
@@ -160,7 +167,7 @@ def extract_cvss_and_impact(metrics: Dict[str, Any]) -> tuple[Optional[float], O
             elif "A:C" in vector_v2:
                 impact_type = impact_type or "DoS"
 
-    return score, severity, impact_type
+    return score, severity, impact_type, vector_string
 
 def derive_impact_from_summary(summary: str) -> str:
     s = summary.lower()
@@ -209,7 +216,7 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
             continue
         published = cve.get("published", "")
         metrics = cve.get("metrics", {}) or {}
-        score, severity, impact_type = extract_cvss_and_impact(metrics)
+        score, severity, impact_type, vector_string = extract_cvss_and_impact(metrics)
         descriptions = cve.get("descriptions", [])
         summary = extract_summary(descriptions)
         if not impact_type:
@@ -221,6 +228,7 @@ def parse_cves(payload: Dict[str, Any]) -> List[SimpleCVE]:
             published=published[:10] if published else "",
             cvss_score=score,
             cvss_severity=severity,
+            cvss_vector_string=vector_string,
             impact_type=impact_type,
             reference_url=ref_url,
             summary=summary,
@@ -234,15 +242,15 @@ def enrich_cvss(cves: List[SimpleCVE]) -> None:
         print(f"[INFO] SKIP_ENRICH=true — skipping enrichment for {len(to_enrich)} CVE(s) without score.")
         return
 
-    to_enrich = [c for c in cves if c.cvss_score is None]
+    to_enrich = [c for c in cves if c.cvss_score is None or c.cvss_vector_string is None]
     if not to_enrich:
-        print("[INFO] All CVEs already have a CVSS score, no enrichment needed.")
+        print("[INFO] All CVEs already have a CVSS score and vector, no enrichment needed.")
         return
 
     api_key = os.getenv(NVD_API_KEY_ENV)
     sleep_duration = ENRICH_SLEEP_WITH_KEY if api_key else ENRICH_SLEEP_NO_KEY
     print(
-        f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score "
+        f"[INFO] Enrichissement CVSS pour {len(to_enrich)} CVE sans score ou vecteur "
         f"(sleep={sleep_duration}s, clé API={'oui' if api_key else 'non'})..."
     )
 
@@ -258,12 +266,14 @@ def enrich_cvss(cves: List[SimpleCVE]) -> None:
             continue
         cve_data = vulns[0].get("cve", {})
         metrics = cve_data.get("metrics", {}) or {}
-        score, severity, impact_type = extract_cvss_and_impact(metrics)
+        score, severity, impact_type, vector_string = extract_cvss_and_impact(metrics)
         if score is not None:
             c.cvss_score = score
             enriched_count += 1
         if severity is not None:
             c.cvss_severity = severity
+        if vector_string is not None:
+            c.cvss_vector_string = vector_string
         if impact_type and (c.impact_type is None or c.impact_type == "unknown"):
             c.impact_type = impact_type
         if not c.impact_type or c.impact_type == "unknown":

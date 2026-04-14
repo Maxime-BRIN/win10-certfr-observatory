@@ -24,9 +24,11 @@ class FrontendCVE:
     published_at: str
     cvss_base_score: Optional[float]
     cvss_severity: Optional[str]
-    exploitation_status: str
+    cvss_vector_string: Optional[str]   # <-- vectorString CVSS v3 persisté
     impact_type: str
     windows_10_versions: List[str]
+    certfr_url: Optional[str]
+    certfr_id: Optional[str]
     reference_url: str
 
 
@@ -55,7 +57,6 @@ def load_nvd_dataset() -> Dict[str, Any]:
 
 
 def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
-    # Support both top-level schema variants
     coverage_start = nvd_data.get("coverage_start") or nvd_data.get("dataset", {}).get("coverage_start", "")
     coverage_end = nvd_data.get("coverage_end") or nvd_data.get("dataset", {}).get("coverage_end", "")
     raw_cves = nvd_data.get("cves", [])
@@ -69,31 +70,28 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
             continue
         seen.add(cve_id)
 
-        # --- Normalise published date ---
-        # New schema: "published" (ISO datetime or date)
-        # Old schema: "published_at" (date string)
+        # --- Published date ---
         published_raw = item.get("published") or item.get("published_at") or ""
         published = published_raw[:10] if published_raw else ""
 
-        # --- Normalise CVSS score ---
-        # New schema: "cvss_score"
-        # Old schema: "cvss_base_score"
+        # --- CVSS score ---
         raw_score = item.get("cvss_score") if item.get("cvss_score") is not None else item.get("cvss_base_score")
         try:
             cvss_base = float(raw_score) if raw_score is not None else None
         except (TypeError, ValueError):
             cvss_base = None
 
-        # --- Normalise severity ---
+        # --- CVSS severity ---
         raw_severity = item.get("cvss_severity")
         cvss_severity = normalise_severity(cvss_base, raw_severity)
 
-        # --- Normalise impact type ---
+        # --- CVSS vector string (v3 prioritaire, sinon v2) ---
+        cvss_vector_string: Optional[str] = item.get("cvss_vector_string") or None
+
+        # --- Impact type ---
         impact_type = item.get("impact_type") or "unknown"
 
-        # --- Normalise reference URL ---
-        # New schema: "reference_url"
-        # Old schema: "certfr_url" (often empty)
+        # --- Reference URL ---
         reference_url = (
             item.get("reference_url")
             or item.get("certfr_url")
@@ -102,6 +100,10 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
         if not reference_url:
             reference_url = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
 
+        # --- CERTFR ---
+        certfr_url: Optional[str] = item.get("certfr_url") or None
+        certfr_id: Optional[str] = item.get("certfr_id") or None
+
         windows_versions = ["1607", "1709", "1909", "21H2", "22H2"]
 
         frontend_cves.append(FrontendCVE(
@@ -109,9 +111,11 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
             published_at=published,
             cvss_base_score=cvss_base,
             cvss_severity=cvss_severity,
-            exploitation_status="unknown",
+            cvss_vector_string=cvss_vector_string,
             impact_type=impact_type,
             windows_10_versions=windows_versions,
+            certfr_url=certfr_url,
+            certfr_id=certfr_id,
             reference_url=reference_url,
         ))
 
@@ -134,10 +138,12 @@ def main() -> None:
 
     total = len(frontend_data["cves"])
     with_score = sum(1 for c in frontend_data["cves"] if c["cvss_base_score"] is not None)
+    with_vector = sum(1 for c in frontend_data["cves"] if c["cvss_vector_string"] is not None)
     without_score = total - with_score
     print(
         f"[INFO] Built frontend dataset: {total} CVE "
-        f"({with_score} with CVSS score, {without_score} without) → {FRONTEND_OUTPUT_PATH}"
+        f"({with_score} with CVSS score, {with_vector} with vector, {without_score} without score)"
+        f" → {FRONTEND_OUTPUT_PATH}"
     )
 
 
