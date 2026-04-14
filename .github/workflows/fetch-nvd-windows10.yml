@@ -39,7 +39,7 @@ jobs:
           name: cve-windows10-json
           path: |
             data/cve_windows10.json
-            data/windows-10-certfr-data.json
+            data/windows-10-cve-data.json
 
       - name: Commit and push updated dataset
         if: github.event_name == 'workflow_dispatch' && env.ALLOW_DATASET_COMMIT == 'true'
@@ -47,10 +47,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ALLOW_DATASET_COMMIT: ${{ vars.ALLOW_DATASET_COMMIT }}
         run: |
-          if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-certfr-data.json)" ]]; then
+          if [[ -n "$(git status --porcelain data/cve_windows10.json data/windows-10-cve-data.json)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/cve_windows10.json data/windows-10-certfr-data.json
+            git add data/cve_windows10.json data/windows-10-cve-data.json
             git commit -m "chore: update NVD Windows 10 datasets"
             git push
           else
