@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# LEGACY / EXPERIMENTAL – plus utilisé par aucun workflow GitHub Actions, conservé pour usage manuel/offline.
 import json
 import os
 import sys
