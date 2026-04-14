@@ -19,7 +19,7 @@ Offrir une interface web légère et autonome pour visualiser, filtrer et analys
 |---|---|
 | **KPIs dynamiques** | Total CVE, CVE CVSS ≥ 8, CVE réseau (AV:N), avec animation count-up |
 | **Graphique mensuel** | Histogramme interactif — clic sur une barre pour filtrer le tableau |
-| **Tableau détaillé** | CVE, date, score NVD (badge coloré), type d'impact, vecteur CVSS, versions Win 10, référence NVD/CERTFR |
+| **Tableau détaillé** | CVE, date, score NVD (badge coloré), type d'impact, vecteur CVSS, versions Win 10, lien NVD |
 | **Badge CVSS coloré** | Score + sévérité (NONE/LOW/MEDIUM/HIGH/CRITICAL) selon NVD CVSS v3 |
 | **Filtres** | CVSS ≥ 8, Réseau (AV:N), tri par score croissant/décroissant |
 | **Filtre par mois** | Clic sur le graphique → badge de filtre actif avec suppression rapide |
@@ -132,16 +132,20 @@ python -m http.server 8080
 
 ```json
 {
+  "dataset": {
+    "coverage_start": "2025-10-14",
+    "coverage_end": "2026-04-14"
+  },
   "cves": [
     {
       "cve_id": "CVE-2025-XXXXX",
-      "published": "2025-11-12",
-      "cvss_score": 7.8,
+      "published_at": "2025-11-12",
+      "cvss_base_score": 7.8,
+      "cvss_severity": "HIGH",
       "cvss_vector_string": "AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-      "impact_type": "Elevation of Privilege",
-      "windows_10_versions": ["21H2", "22H2"],
-      "certfr_id": "CERTFR-2025-AVI-XXXX",
-      "certfr_url": "https://www.cert.ssi.gouv.fr/avis/CERTFR-2025-AVI-XXXX/"
+      "impact_type": "EoP",
+      "windows_10_versions": ["1607", "1709", "1909", "21H2", "22H2"],
+      "reference_url": "https://nvd.nist.gov/vuln/detail/CVE-2025-XXXXX"
     }
   ]
 }
