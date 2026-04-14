@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Build frontend-compatible dataset from NVD Windows 10 CVE data.
-
-Handles both the old schema (cvss_base_score, certfr_url, certfr_id)
-and the new schema (cvss_score, cvss_severity, published, reference_url)
-so a mixed cve_windows10.json is gracefully normalised.
-"""
+"""Build frontend-compatible dataset from NVD Windows 10 CVE data."""
 
 from __future__ import annotations
 
@@ -24,11 +19,9 @@ class FrontendCVE:
     published_at: str
     cvss_base_score: Optional[float]
     cvss_severity: Optional[str]
-    cvss_vector_string: Optional[str]   # <-- vectorString CVSS v3 persisté
+    cvss_vector_string: Optional[str]
     impact_type: str
     windows_10_versions: List[str]
-    certfr_url: Optional[str]
-    certfr_id: Optional[str]
     reference_url: str
 
 
@@ -82,27 +75,16 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
             cvss_base = None
 
         # --- CVSS severity ---
-        raw_severity = item.get("cvss_severity")
-        cvss_severity = normalise_severity(cvss_base, raw_severity)
+        cvss_severity = normalise_severity(cvss_base, item.get("cvss_severity"))
 
-        # --- CVSS vector string (v3 prioritaire, sinon v2) ---
+        # --- CVSS vector string ---
         cvss_vector_string: Optional[str] = item.get("cvss_vector_string") or None
 
         # --- Impact type ---
         impact_type = item.get("impact_type") or "unknown"
 
-        # --- Reference URL ---
-        reference_url = (
-            item.get("reference_url")
-            or item.get("certfr_url")
-            or f"https://nvd.nist.gov/vuln/detail/{cve_id}"
-        )
-        if not reference_url:
-            reference_url = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
-
-        # --- CERTFR ---
-        certfr_url: Optional[str] = item.get("certfr_url") or None
-        certfr_id: Optional[str] = item.get("certfr_id") or None
+        # --- Reference URL (NVD fallback) ---
+        reference_url = item.get("reference_url") or f"https://nvd.nist.gov/vuln/detail/{cve_id}"
 
         windows_versions = ["1607", "1709", "1909", "21H2", "22H2"]
 
@@ -114,8 +96,6 @@ def build_frontend_dataset(nvd_data: Dict[str, Any]) -> Dict[str, Any]:
             cvss_vector_string=cvss_vector_string,
             impact_type=impact_type,
             windows_10_versions=windows_versions,
-            certfr_url=certfr_url,
-            certfr_id=certfr_id,
             reference_url=reference_url,
         ))
 
