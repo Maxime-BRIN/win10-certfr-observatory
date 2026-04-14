@@ -34,8 +34,7 @@ Offrir une interface web légère et autonome pour visualiser, filtrer et analys
 win10-cve-observatory/
 │
 ├── index.html                            # Interface principale (SPA statique)
-├── methodology.html                      # Page de méthodologie
-├── requirements.txt                      # Dépendances Python (requests, beautifulsoup4)
+├── README.md
 │
 ├── data/
 │   ├── windows-10-cve-data.json          # ✅ Dataset principal (utilisé par le frontend)
@@ -43,9 +42,7 @@ win10-cve-observatory/
 │
 ├── tools/
 │   ├── fetch_cve_windows10.py            # Récupération CVE depuis l'API NVD
-│   ├── enrich_cve_with_nvd.py            # Enrichissement CVSS/vecteur via NVD
-│   ├── build_windows10_frontend_data.py  # Transformation → windows-10-cve-data.json
-│   └── build_certfr_cve_index.py         # (Utilitaire CERTFR – usage ponctuel)
+│   └── build_windows10_frontend_data.py  # Transformation → windows-10-cve-data.json
 │
 └── .github/
     └── workflows/
@@ -69,7 +66,7 @@ build_windows10_frontend_data.py
 index.html  (lecture JSON statique, rendu côté client)
 ```
 
-L'enrichissement CVSS supplémentaire (`enrich_cve_with_nvd.py`) peut être exécuté manuellement si des scores sont manquants dans le JSON brut. Le frontend dispose également d'un **fallback NVD API** (appel direct côté navigateur) pour compléter les scores manquants à la volée.
+> Le frontend dispose également d'un **fallback NVD API** (appel direct côté navigateur) pour compléter les scores CVSS manquants à la volée.
 
 ---
 
@@ -107,7 +104,7 @@ git clone https://github.com/Maxime-BRIN/win10-cve-observatory.git
 cd win10-cve-observatory
 
 # Installer les dépendances Python
-pip install -r requirements.txt
+pip install requests
 
 # (Optionnel) Regénérer les données
 export NVD_API_KEY="votre_cle"
@@ -159,7 +156,7 @@ python -m http.server 8080
 | Typographie | Google Fonts – Lato + Inter |
 | Données | JSON statique (NVD API) |
 | Automatisation | GitHub Actions (Python 3.11) |
-| Scraping/enrichissement | Python – `requests`, `beautifulsoup4` |
+| Scripts Python | `requests` |
 
 ---
 
