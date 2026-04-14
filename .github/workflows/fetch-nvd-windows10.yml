@@ -51,10 +51,11 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git fetch origin
-            git checkout -B data-updates origin/main
+            git checkout main
+            git reset --hard origin/main
             git add data/cve_windows10.json data/windows-10-cve-data.json
             git commit -m "chore: update NVD Windows 10 datasets" || echo "Nothing to commit"
-            git push origin data-updates
+            git push origin main
           else
             echo "No changes in datasets, nothing to commit."
           fi
