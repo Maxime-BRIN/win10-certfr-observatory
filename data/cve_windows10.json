@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-20T08:21:16Z",
+  "generated_at": "2026-04-21T08:02:21Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-20",
+  "coverage_end": "2026-04-21",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -2102,6 +2102,106 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26128",
       "summary": "Improper authentication in Windows SMB Server allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32093",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32093",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Function Discovery Service (fdwsd.dll) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32149",
+      "published": "2026-04-14",
+      "cvss_score": 7.3,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32149",
+      "summary": "Improper input validation in Windows Hyper-V allows an authorized attacker to execute code locally."
+    },
+    {
+      "cve_id": "CVE-2026-32150",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32150",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Function Discovery Service (fdwsd.dll) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32151",
+      "published": "2026-04-14",
+      "cvss_score": 6.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32151",
+      "summary": "Exposure of sensitive information to an unauthorized actor in Windows Shell allows an authorized attacker to disclose information over a network."
+    },
+    {
+      "cve_id": "CVE-2026-32164",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32164",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows User Interface Core allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32183",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32183",
+      "summary": "Improper neutralization of special elements used in a command ('command injection') in Windows Snipping Tool allows an unauthorized attacker to execute code locally."
+    },
+    {
+      "cve_id": "CVE-2026-32202",
+      "published": "2026-04-14",
+      "cvss_score": 4.3,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32202",
+      "summary": "Protection mechanism failure in Windows Shell allows an unauthorized attacker to perform spoofing over a network."
+    },
+    {
+      "cve_id": "CVE-2026-32212",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32212",
+      "summary": "Improper link resolution before file access ('link following') in Universal Plug and Play (upnp.dll) allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32214",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32214",
+      "summary": "Improper access control in Universal Plug and Play (upnp.dll) allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32217",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32217",
+      "summary": "Insertion of sensitive information into log file in Windows Kernel allows an authorized attacker to disclose information locally."
     },
     {
       "cve_id": "CVE-2026-32225",
