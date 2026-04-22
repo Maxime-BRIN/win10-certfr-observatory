@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-21T08:02:21Z",
+  "generated_at": "2026-04-22T07:58:42Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-21",
+  "coverage_end": "2026-04-22",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -2102,6 +2102,136 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26128",
       "summary": "Improper authentication in Windows SMB Server allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32075",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32075",
+      "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32077",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32077",
+      "summary": "Untrusted pointer dereference in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32079",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32079",
+      "summary": "Exposure of sensitive information to an unauthorized actor in Windows File Explorer allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32081",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32081",
+      "summary": "Exposure of sensitive information to an unauthorized actor in Windows File Explorer allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32082",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32082",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows SSDP Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32083",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32083",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows SSDP Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32084",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32084",
+      "summary": "Exposure of sensitive information to an unauthorized actor in Windows File Explorer allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32085",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32085",
+      "summary": "Exposure of sensitive information to an unauthorized actor in Windows Remote Procedure Call allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32086",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32086",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Function Discovery Service (fdwsd.dll) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32087",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32087",
+      "summary": "Heap-based buffer overflow in Function Discovery Service (fdwsd.dll) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32089",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32089",
+      "summary": "Use after free in Windows Speech Brokered Api allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32090",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32090",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Speech Brokered Api allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32091",
+      "published": "2026-04-14",
+      "cvss_score": 8.4,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32091",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Microsoft Brokering File System allows an unauthorized attacker to elevate privileges locally."
     },
     {
       "cve_id": "CVE-2026-32093",
