@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-22T07:58:42Z",
+  "generated_at": "2026-04-23T08:05:32Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-22",
+  "coverage_end": "2026-04-23",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -2102,6 +2102,176 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26128",
       "summary": "Improper authentication in Windows SMB Server allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27914",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27914",
+      "summary": "Improper access control in Microsoft Management Console allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27915",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27915",
+      "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27916",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27916",
+      "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27917",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27917",
+      "summary": "Use after free in Windows WFP NDIS Lightweight Filter Driver (wfplwfs.sys) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27919",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27919",
+      "summary": "Untrusted pointer dereference in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27920",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27920",
+      "summary": "Untrusted pointer dereference in Windows Universal Plug and Play (UPnP) Device Host allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27921",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27921",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows TCP/IP allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27922",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27922",
+      "summary": "Use after free in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27923",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27923",
+      "summary": "Use after free in Desktop Window Manager allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27925",
+      "published": "2026-04-14",
+      "cvss_score": 6.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "InfoLeak",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27925",
+      "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an unauthorized attacker to disclose information over an adjacent network."
+    },
+    {
+      "cve_id": "CVE-2026-27929",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27929",
+      "summary": "Time-of-check time-of-use (toctou) race condition in Windows LUAFV allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27930",
+      "published": "2026-04-14",
+      "cvss_score": 5.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N",
+      "impact_type": "InfoLeak",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27930",
+      "summary": "Out-of-bounds read in Windows GDI allows an unauthorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-32068",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32068",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows SSDP Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32070",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32070",
+      "summary": "Use after free in Windows Common Log File System Driver allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-32071",
+      "published": "2026-04-14",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32071",
+      "summary": "Null pointer dereference in Windows Local Security Authority Subsystem Service (LSASS) allows an unauthorized attacker to deny service over a network."
+    },
+    {
+      "cve_id": "CVE-2026-32072",
+      "published": "2026-04-14",
+      "cvss_score": 6.2,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "InfoLeak",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32072",
+      "summary": "Improper authentication in Windows Active Directory allows an unauthorized attacker to perform spoofing locally."
+    },
+    {
+      "cve_id": "CVE-2026-32073",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32073",
+      "summary": "Use after free in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
     },
     {
       "cve_id": "CVE-2026-32075",
