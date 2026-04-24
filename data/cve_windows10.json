@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-23T08:05:32Z",
+  "generated_at": "2026-04-24T08:14:55Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-23",
+  "coverage_end": "2026-04-24",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -2104,6 +2104,116 @@
       "summary": "Improper authentication in Windows SMB Server allows an authorized attacker to elevate privileges locally."
     },
     {
+      "cve_id": "CVE-2026-26174",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26174",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Server Update Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26175",
+      "published": "2026-04-14",
+      "cvss_score": 4.6,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "InfoLeak",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26175",
+      "summary": "Use of uninitialized resource in Windows Boot Manager allows an unauthorized attacker to bypass a security feature with a physical attack."
+    },
+    {
+      "cve_id": "CVE-2026-26176",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26176",
+      "summary": "Heap-based buffer overflow in Windows Client Side Caching driver (csc.sys) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26177",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26177",
+      "summary": "Use after free in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26178",
+      "published": "2026-04-14",
+      "cvss_score": 8.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26178",
+      "summary": "Integer size truncation in Windows Advanced Rasterization Platform (WARP) allows an unauthorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26180",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26180",
+      "summary": "Heap-based buffer overflow in Windows Kernel allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26182",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26182",
+      "summary": "Use after free in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27908",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27908",
+      "summary": "Use after free in Windows TDI Translation Driver (tdx.sys) allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27909",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27909",
+      "summary": "Use after free in Microsoft Windows Search Component allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27910",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27910",
+      "summary": "Improper handling of insufficient permissions or privileges in Windows Installer allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-27911",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-27911",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows User Interface Core allows an authorized attacker to elevate privileges locally."
+    },
+    {
       "cve_id": "CVE-2026-27914",
       "published": "2026-04-14",
       "cvss_score": 7.8,
@@ -2442,6 +2552,16 @@
       "impact_type": "RCE",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32151",
       "summary": "Exposure of sensitive information to an unauthorized actor in Windows Shell allows an authorized attacker to disclose information over a network."
+    },
+    {
+      "cve_id": "CVE-2026-32156",
+      "published": "2026-04-14",
+      "cvss_score": 7.4,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32156",
+      "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an unauthorized attacker to execute code locally."
     },
     {
       "cve_id": "CVE-2026-32164",
