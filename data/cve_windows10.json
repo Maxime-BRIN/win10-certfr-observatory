@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-24T08:14:55Z",
+  "generated_at": "2026-04-25T07:26:35Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-24",
+  "coverage_end": "2026-04-25",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -1084,6 +1084,16 @@
       "summary": "Heap-based buffer overflow in Windows DWM Core Library allows an authorized attacker to elevate privileges locally."
     },
     {
+      "cve_id": "CVE-2026-0390",
+      "published": "2026-04-14",
+      "cvss_score": 6.7,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-0390",
+      "summary": "Reliance on untrusted inputs in a security decision in Windows Boot Loader allows an authorized attacker to bypass a security feature locally."
+    },
+    {
       "cve_id": "CVE-2026-20804",
       "published": "2026-01-13",
       "cvss_score": 7.7,
@@ -1484,6 +1494,16 @@
       "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows SMB Server allows an authorized attacker to deny service over a network."
     },
     {
+      "cve_id": "CVE-2026-20928",
+      "published": "2026-04-14",
+      "cvss_score": 4.6,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "InfoLeak",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-20928",
+      "summary": "Improper removal of sensitive information before storage or transfer in Windows Recovery Environment Agent allows an unauthorized attacker to bypass a security feature with a physical attack."
+    },
+    {
       "cve_id": "CVE-2026-20929",
       "published": "2026-01-13",
       "cvss_score": 7.5,
@@ -1782,6 +1802,16 @@
       "impact_type": "RCE",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-23669",
       "summary": "Use after free in RPC Runtime allows an authorized attacker to execute code over a network."
+    },
+    {
+      "cve_id": "CVE-2026-23670",
+      "published": "2026-04-14",
+      "cvss_score": 5.7,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-23670",
+      "summary": "Untrusted pointer dereference in Windows Virtualization-Based Security (VBS) Enclave allows an authorized attacker to bypass a security feature locally."
     },
     {
       "cve_id": "CVE-2026-23671",
@@ -2102,6 +2132,136 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26128",
       "summary": "Improper authentication in Windows SMB Server allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26151",
+      "published": "2026-04-14",
+      "cvss_score": 7.1,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26151",
+      "summary": "Insufficient ui warning of dangerous operations in Windows Remote Desktop allows an unauthorized attacker to perform spoofing over a network."
+    },
+    {
+      "cve_id": "CVE-2026-26152",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26152",
+      "summary": "Insecure storage of sensitive information in Windows Cryptographic Services allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26155",
+      "published": "2026-04-14",
+      "cvss_score": 6.5,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26155",
+      "summary": "Microsoft Local Security Authority Subsystem Service Information Disclosure Vulnerability"
+    },
+    {
+      "cve_id": "CVE-2026-26156",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26156",
+      "summary": "Heap-based buffer overflow in Windows Hyper-V allows an unauthorized attacker to execute code locally."
+    },
+    {
+      "cve_id": "CVE-2026-26159",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26159",
+      "summary": "Missing authentication for critical function in Windows Remote Desktop Licensing Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26160",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26160",
+      "summary": "Missing authentication for critical function in Windows Remote Desktop Licensing Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26162",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26162",
+      "summary": "Access of resource using incompatible type ('type confusion') in Windows OLE allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26163",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26163",
+      "summary": "Double free in Windows Kernel allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26167",
+      "published": "2026-04-14",
+      "cvss_score": 8.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26167",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Push Notifications allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26168",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26168",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26169",
+      "published": "2026-04-14",
+      "cvss_score": 6.1,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26169",
+      "summary": "Buffer over-read in Windows Kernel Memory allows an authorized attacker to disclose information locally."
+    },
+    {
+      "cve_id": "CVE-2026-26170",
+      "published": "2026-04-14",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26170",
+      "summary": "Improper input validation in Microsoft PowerShell allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-26173",
+      "published": "2026-04-14",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-26173",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Ancillary Function Driver for WinSock allows an authorized attacker to elevate privileges locally."
     },
     {
       "cve_id": "CVE-2026-26174",
