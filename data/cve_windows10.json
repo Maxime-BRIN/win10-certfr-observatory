@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-25T07:26:35Z",
+  "generated_at": "2026-04-26T07:47:01Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-04-25",
+  "coverage_end": "2026-04-26",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
