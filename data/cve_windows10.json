@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-05T08:19:43Z",
+  "generated_at": "2026-05-07T08:42:18Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-05-05",
+  "coverage_end": "2026-05-07",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -2794,6 +2794,16 @@
       "summary": "Protection mechanism failure in Windows Shell allows an unauthorized attacker to bypass a security feature over a network."
     },
     {
+      "cve_id": "CVE-2026-32226",
+      "published": "2026-04-14",
+      "cvss_score": 5.9,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32226",
+      "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in .NET Framework allows an unauthorized attacker to deny service over a network."
+    },
+    {
       "cve_id": "CVE-2026-33098",
       "published": "2026-04-14",
       "cvss_score": 7.8,
@@ -2832,6 +2842,16 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-33104",
       "summary": "Concurrent execution using shared resource with improper synchronization ('race condition') in Windows Win32K - GRFX allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-33116",
+      "published": "2026-04-14",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-33116",
+      "summary": "Loop with unreachable exit condition ('infinite loop') in .NET, .NET Framework, Visual Studio allows an unauthorized attacker to deny service over a network."
     },
     {
       "cve_id": "CVE-2026-33824",
