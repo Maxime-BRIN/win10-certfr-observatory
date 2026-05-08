@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-07T08:42:18Z",
+  "generated_at": "2026-05-08T07:49:49Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-05-07",
+  "coverage_end": "2026-05-08",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -1784,6 +1784,16 @@
       "summary": "Improper privilege management in Windows Remote Desktop allows an authorized attacker to elevate privileges locally."
     },
     {
+      "cve_id": "CVE-2026-23666",
+      "published": "2026-04-14",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-23666",
+      "summary": "Improper input validation in .NET Framework allows an unauthorized attacker to deny service over a network."
+    },
+    {
       "cve_id": "CVE-2026-23668",
       "published": "2026-03-10",
       "cvss_score": 7.0,
@@ -2722,6 +2732,16 @@
       "impact_type": "DoS",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32156",
       "summary": "Use after free in Windows Universal Plug and Play (UPnP) Device Host allows an unauthorized attacker to execute code locally."
+    },
+    {
+      "cve_id": "CVE-2026-32157",
+      "published": "2026-04-14",
+      "cvss_score": 8.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-32157",
+      "summary": "Use after free in Remote Desktop Client allows an unauthorized attacker to execute code over a network."
     },
     {
       "cve_id": "CVE-2026-32164",
