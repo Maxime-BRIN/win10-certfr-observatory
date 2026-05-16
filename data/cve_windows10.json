@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-15T08:55:52Z",
+  "generated_at": "2026-05-16T08:11:40Z",
   "coverage_start": "2025-10-14",
-  "coverage_end": "2026-05-15",
+  "coverage_end": "2026-05-16",
   "cves": [
     {
       "cve_id": "CVE-2025-24052",
@@ -3202,6 +3202,126 @@
       "impact_type": "EoP",
       "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40380",
       "summary": "Heap-based buffer overflow in Volume Manager Extension Driver allows an authorized attacker to execute code with a physical attack."
+    },
+    {
+      "cve_id": "CVE-2026-40382",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40382",
+      "summary": "Use after free in Windows Telephony Service allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40397",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40397",
+      "summary": "Integer underflow (wrap or wraparound) in Windows Common Log File System Driver allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40398",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40398",
+      "summary": "Heap-based buffer overflow in Windows Remote Desktop allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40399",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40399",
+      "summary": "Stack-based buffer overflow in Windows TCP/IP allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40401",
+      "published": "2026-05-12",
+      "cvss_score": 7.1,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:C/C:N/I:N/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40401",
+      "summary": "Null pointer dereference in Windows TCP/IP allows an unauthorized attacker to deny service locally."
+    },
+    {
+      "cve_id": "CVE-2026-40403",
+      "published": "2026-05-12",
+      "cvss_score": 8.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40403",
+      "summary": "Heap-based buffer overflow in Windows Win32K - GRFX allows an authorized attacker to execute code locally."
+    },
+    {
+      "cve_id": "CVE-2026-40406",
+      "published": "2026-05-12",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "impact_type": "RCE",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40406",
+      "summary": "Use after free in Windows TCP/IP allows an unauthorized attacker to disclose information over a network."
+    },
+    {
+      "cve_id": "CVE-2026-40407",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40407",
+      "summary": "Heap-based buffer overflow in Windows Common Log File System Driver allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40408",
+      "published": "2026-05-12",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40408",
+      "summary": "Use after free in Windows Kernel-Mode Drivers allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40410",
+      "published": "2026-05-12",
+      "cvss_score": 7.0,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "impact_type": "EoP",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40410",
+      "summary": "Use after free in Windows SMB Client allows an authorized attacker to elevate privileges locally."
+    },
+    {
+      "cve_id": "CVE-2026-40413",
+      "published": "2026-05-12",
+      "cvss_score": 7.4,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:N/I:N/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40413",
+      "summary": "Null pointer dereference in Windows TCP/IP allows an unauthorized attacker to deny service over an adjacent network."
+    },
+    {
+      "cve_id": "CVE-2026-40414",
+      "published": "2026-05-12",
+      "cvss_score": 7.4,
+      "cvss_severity": "HIGH",
+      "cvss_vector_string": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:N/I:N/A:H",
+      "impact_type": "DoS",
+      "reference_url": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-40414",
+      "summary": "Null pointer dereference in Windows TCP/IP allows an unauthorized attacker to deny service over an adjacent network."
     },
     {
       "cve_id": "CVE-2026-42825",
